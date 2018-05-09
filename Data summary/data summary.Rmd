@@ -1,0 +1,599 @@
+---
+title: "First Draft of Final Paper"
+author: "Lucie Lu"
+date: "March 19, 2018"
+output: pdf_document
+---
+
+
+Since the 1980s, economic liberalization has advanced remarkably. There has been a marked shift in the orientation of the trade and industrial policies for developing countries. Many developing countries moved away from a heavy reliance on direct intervention and inward-looking trade regimes toward less controlled and more export-oriented trade regimes. Simply put, they chose to liberalize their trade regimes. Many developing countries have decided to integrate their economies into a global economy by dismantling their protectionist trade policies. Countries such as Argentina, Brazil, Indonesia, Mexico have conducted substantial trade reforms respectively, including reducing tariff rates, reforming import licensing procedures in the 1980s. What drove such a substantial change in their trade policy? 
+
+
+
+What has driven the trend in trade liberalization? For the developing countries, it is costly for them to abandon the protectionist, import-substituting industrialization strategy given that they have been the orthodoxy among developing country policymakers in the post-war period. A temporary protection for the infant industry is sometimes necessary for infant industries to gain competitiveness in trade in the developing countries. However, over time, many infant industries refuse to mature but become inefficient, and what is worse, they hold vested interests of the oligarchies. In this case, interest groups and political leaders usually benefit from the status quo of the protectionist policies. Change in the protectionist status quo is unexpected. This make the question puzzling. If the political leaders benefit from the status quo, why do they conduct reforms? Why would they choose to lower the trade barriers?
+
+
+#Argument
+
+
+Rodrick (1994) argues that it is very difficult for politicians to conduct liberalization reforms in normal times, but times of crises can provide an opportunity moment for undertaking structural reforms. What are the 'times of crises' to drive the structural change? Some scholars claim the economic crises may force countries to give up the protectionist old policies and move toward a market-friendly and open one. Crises may underscore the problems of the old protectionist view of a country, so countries conduct reform and liberalize to recover from the crises (Krugers, 1997). Others claim that external pressure such as a country's accession to the international institutions helps facilitate the transition. External pressures such as the World Trade Organization (WTO), IMF or trade treaties, matter (Vreeland, 2007). When developing countries join these international institutions or sign the binding international trade agreements with other developed countries, the newly joined members will show their commitment to the international regimes (Baccini & Urpelainen, 2014). A voluntary tariff reduction in a developing country will send a promising signal to the international community. 
+
+
+Now, what about political reforms?  Another closely related structural change, the trend of democratization, was happening a decade before the trend to free trade. In 1975, there were around thirty democracies in the world, while by 1992, there were about eight-nine. Are these two trends causally related or happened to coincide by chance? When countries are more democratized, are they more likely to initiate trade liberalizing economic reforms? Are sharp changes in the economic reform the product of political transformation? As Rodrik argued, "Not all political transformations result in trade reform, but sharp changes in trade policy are typically the result of such transformation (1994, p. 69)." This article largely focuses on the regime type. To show that the regime type places a role in the move to free trade, I will also control for the factors of economic crisis and external pressure illustrated above.  
+
+
+
+What remains unclear is whether political reforms affect trade policy reforms, or whether trade reforms induce political transition. The research design of observational data plus classic regression model cannot fully address this endogeneity issue. The fundamental problem of drawing causal inference in an observational data is to make the right comparison. To compare apples to apples, we need to hold other things equal. Because in observational studies, treatments are observed rather than assigned, so it is not possible to consider the observed data under different treatment are randomly assigned. It is highly possible that the two groups of countries (one with democratization, the other without) are fundamentally different in many ways. All of the potential confounders (whether observed or unobserved) will obscure the causal relationship we try to infer. Milner and Kubota's article (2005), "Why the Move to Free Trade? Democracy and Trade Policy in Developing Countries" is a classic piece. They provide a systematic investigation on the relationship between regime change and trade liberalization. They have suggested that democracy has led to trade liberalization. I will cast doubt on their analysis strategy that has relied on controlling for confounding covariates through linear regression. I suggest that a more sophisticated research design, matching can to some extent solve the selection bias problem in the observational data.  
+
+
+I am going to replicate and extend the paper on Milner and Kubota's argument: When countries become more democratic, they are more willing to open their markets to the international economy. I have a couple of concerns on their original work. They present the average treatment effect of democracy on average tariff level in the Ordinary Least Squares (OLS) model, which at best only presents the two variables are positively correlated. Given the limitation of observational data, it is not convincing to draw a causal relationship between the two. To extend their original piece, inspired by Angrist and Pischke (2015), I will conduct a regression with matching approach to overcome the possible selection problem in the observational data. The goal of this replication paper is to present a regression-based causal story: countries that have democratized will tend to lower their levels of trade barriers.  
+
+
+The paper will be divided into three main sections. The first section will briefly describe the variables, measures, the reasons for adjustment. The second section is an empirical analysis of a classic OLS approach with a discussion of statistical inference. It will move on to employ a combination of matching and regression to make a good comparison between country with and without political reform demonstrate the treatment effect of democratization.  
+
+
+
+```{r include=FALSE, cache=FALSE}
+## To make the pdf file do
+## render("exploration4.Rmd",output_format=pdf_document())
+
+require(knitr)
+opts_chunk$set(
+  tidy=FALSE,     # display code as typed
+  size="small",    # slightly smaller font for code
+  echo=TRUE,
+  results='markup',
+  strip.white=TRUE,
+  fig.path='figs/fig',
+  cache=FALSE,
+  highlight=TRUE,
+  width.cutoff=132,
+  size='footnotesize',
+  out.width='.9\\textwidth',
+  message=FALSE,
+  comment=NA)
+```
+
+
+```{r initialize,echo=FALSE, message=FALSE, warning=FALSE}
+##First, just setup the R environment for today:
+if(!file.exists('figs')) dir.create('figs')
+
+options(SweaveHooks=list(fig=function(){
+			   par(mar=c(3.5, 3, 1.1, 0),
+			       pty="s",
+			       mgp=c(1.5,0.5,0),
+			       oma=c(0,0,0,0))},
+			 echo=function(){options(continue=" ") ##Don't show "+" prompts,
+			 options(prompt=" ")
+			 }),
+	digits=4,
+	scipen=8,
+	width=132
+	)
+options(error=function(){options(prompt="> ",continue="+ ");NULL})
+
+#To prepare the environment
+library(readstata13)
+library(dplyr)
+library(ggplot2)
+library(stargazer)
+
+#install.packages("devtools")
+library(devtools)
+
+library(foreign)
+#install.packages("gplots")
+library(gplots)
+
+library(lmtest)
+library(sandwich)
+
+```
+
+
+#Section I: Data on Trade Liberalization and Democratization
+
+The data that I use in the following analysis is a data set compiled by Milner and Kubota (2005). It is a time-series cross-sectional (TSCS) data, covering 179 developing countries from 1980 to 1999. It include various measures not only on trade policy but also of a series of political regime measures, economic development measures and so on. The central hypothesis is that an increase in democracy will lead to a reduction in trade barriers, ceteris paribus.    
+
+
+The data Milner and Kubota have collected on the developing countries demonstrate a significant change in the measure of trade policy. *Tariff*, a country's unweighted average statutory tariff rate collected, is a key measure of a country's trade policy in year *t*. The historical trend shows that a dramatic decline in the average tariff level across countries has happened from 1982 to 1999. Statutory tariff rate has decreased by over sixty percent, from an average about 30 percent in 1980 to around 12 percent in 1999 in the developing countries.
+
+```{r, eval=T, echo=F, results="hide"}
+library(readstata13)
+mydata <- read.dta13(file.choose())
+#View(mydata)
+#Subset the large dataset
+mydata2 <- mydata[,c(2,3,14,7,15,5,40,17,4,8,10,16), drop=F]
+
+
+#View(mydata2)
+colnames(mydata2) <- c("Country","Year","Tariff","Openness","Regime","Democracy","Dictator","Years of Office","GATT/WTO","Economic Crisis","GDP PC 95","IMF")
+mydata_2 <- subset(mydata2, Year > 1979) #Select the years aftr 1979.
+
+save(mydata_2,file="mydata_2fulldataset.rda")
+
+#The change of the statutory tariff rate
+m1980 <- mean(mydata2$Tariff[mydata2$Year==1980], na.rm = T)
+m1999 <- mean(mydata2$Tariff[mydata2$Year==1999], na.rm = T)
+mperc<- (m1999-m1980)/m1980
+mperc #-0.58
+
+result_m_tariff <- data.frame(matrix(nrow=20, ncol=2))
+colnames(result_m_tariff) <- c ("Year", "Tariff")
+for (i in 1:20){
+  result_m_tariff[i,1] <- i+1979
+  mean <- mean(mydata2$Tariff[mydata_2$Year== i+1979], na.rm = T)
+  result_m_tariff[i,2] <- mean
+}
+result_m_tariff
+#plot(result_m_tariff)
+
+```
+
+More evidence of trade liberalization comes from a second measure of trade policy: the dichotomous categorization of countries into open and closed trade regimes. The data covers ninety developing countries from 1980 to 1999. In 1980, only 14 countries were scored as openness, while in 1999, 62 countries were open economies. The number of a country classified as open economy has increased by three times.
+
+```{r, eval=T, echo=F, results="hide"}
+o1980 <- sum(mydata2$Openness[mydata2$Year==1980 & mydata2$Openness == 1], na.rm = T) #14
+o1999 <- sum(mydata2$Openness[mydata2$Year==1999 & mydata2$Openness == 1], na.rm = T) #62
+operc <- (o1999-o1980)/o1980
+
+```
+
+Evidence of democratization among the developing countries is also plentiful. To measure regime type, the paper uses the 21-Point Polity Score, ranging from -10 for a highly autocratic state to 10 for a highly democratic state. The average Polity IV score for about 110 developing countries that fell from around -3.4 to -4.7 and increased sharply to a score of 1.8 in 1999. It suggests that although many regimes on averages with mixes of democratic and autocratic features (-5 to 5), the wave of democratization has been evident since the mid-1970s. Similarly, the dichotomous regime shows how the number of democracies has increased over time. The series show that the process of democratization has started in the 1970s. In 1970, less than 20 developing countries were quantified as democracies. Over three decades, there has been a four-fold increase in the number of democracies among the developing countries.
+
+```{r, eval=T, echo=F, results="hide"}
+
+result_m_regime_2 <- data.frame(matrix(nrow=30, ncol=2))
+colnames(result_m_regime_2) <- c ("Year", "PolityScore")
+for (i in 1:30){
+  result_m_regime_2[i,1] <- i+1969
+  mean <- mean(mydata2$Regime[mydata2$Year== i+1969], na.rm = T)
+  result_m_regime_2[i,2] <- mean
+}
+result_m_regime_2
+
+#plot(result_m_regime_2)
+
+```
+
+```{r, eval=T, echo=F, results="hide"}
+
+result_m_regime_3 <- data.frame(matrix(nrow=30, ncol=2))
+colnames(result_m_regime_3) <- c("Year", "Democracy")
+
+for (i in 1:30){
+  result_m_regime_3[i,1] <- i+1969
+  counter <- sum (mydata2$Democracy[mydata2$Year== i+1969 & mydata2$Democracy ==1], na.rm=T)
+  result_m_regime_3[i,2] <- counter
+}
+
+result_m_regime_3
+
+#plot(result_m_regime_3)
+```
+
+
+
+##Data and Measures
+
+
+**Independent Variables**  
+*Tariff* is a country's average statutory tariff rate between 1980 and 1999. However, this is poorly measured with a large number of missing data in the data set. To be fair, it is notoriously difficult to measure and hard to find time-series and cross-sectional data on this measure.  
+
+*Openness*, is our second measure of trade liberalization with dichotomous classification of trade regimes into closed (=0) and open (=1) ones. This measure includes a broader domain than the average tariff rate: non-tariff trade barriers, average tariff rate, black market exchange rate, and general economic structure of a country. According to Kornai (1992), a country is coded as closed if any of the following is true: nontariff barriers cover 40 percent or more of trade; average tariff rates are 40 percent or more; the black market exchange rate depreciated by 20 percent or more relative to the official exchange rate during the 1970s or 1980s, and there was a state monopoly on exports. This measure of trade policy can be used for robustness check. 
+
+
+**Dependent Variable**
+
+*Regime (Polity Score)* is a 21-poinit scale that measures variations both within democracies and among autocracies. This measurement comes from Polity III and Polity IV. It ranges from -10 (highly autocratic) to 10 (highly democratic). 
+
+*Dictator* is a measure of the variations of autocracies differentiated by single-party regime, military regime and personalist regimes. It is coded as 1-8 with various characteristics of a regime type.  
+
+
+**Control Variables**  
+
+*GDP per capita* is A lagged value of per capita real GDP based in 2005. The economic development is likely to affect its trade policy and its political regime change. More developed countries tend to be more economically and politically liberal.    
+
+
+*Economic Crisis* is an extreme event that occurs in that specific year rather than an economic variable with yearly change. To code that year with economic crisis, one of the two conditions hold: either the country's inflation rate is 40 percent or more and it increases by 25 percent or more from the year before, or per capita GDP falls by 15 percent or more from the previous year (=1). When countries experience crisis, the political leaders tend to conduct political and economic reforms to address the crisis. They are more likely to liberalize their trade regime because of a domestic demand or a conditionality of foreign aid.  
+
+*GATT/WTO Member* is A lagged variable indicating whether a country is in the GATT/WTO(=1) or not. Joining a WTO induce member countries to lower their trade barriers. Also, WTO members tend to welcome new members intending to adopt liberal policies in both economic and political domains.  
+
+*Years of Office* counts the number of years a government has been in office. It ranges from 0 to 44, with the mean of 8.4. It is included in the control variable because the number of years a government in power will have an impact on both political and economic reforms. A new government might indicate a change in leadership and new idea.
+
+
+
+The summary of statistics follows in Table 1.
+
+
+```{r, eval = TRUE, echo = FALSE, results = "hide", message = FALSE, warning = FALSE}
+#summary(mydata_2)
+#str(mydata_2)
+#dim(mydata_2)
+
+#########Explore the data
+#Check the missing values
+#table(mydata_2$Tariff, useNA="ifany") #The missing values: NA = 2683
+sum(mydata_2$Tariff == "  ", na.rm=T) #if there is any missing valus in the blank
+sum(mydata_2$Tariff == "0", na.rm=T) #20
+is.na(mydata_2)[1,] #From this, we can see only the variable "Tariff" has missing values
+
+#Check the missing values of Tariff before 1980 
+mydata2_3<- subset(mydata2, Year <= 1979)
+#table(mydata2_3$Tariff, useNA="ifany") #The missing values: NA = 2683
+
+#desribe the data
+library(psych)
+#subset the data without country name
+mydata_2_des_noc <- mydata_2[,!names(mydata_2)%in%c("Country")]
+#basic descriptive Statistics
+data2_des <- describe(mydata_2_des_noc, na.rm=T, check=T, skew=F, quant=c(.25,.5,.75))
+data2_des
+
+```
+
+```{r Table data description, results='asis', echo = FALSE, message=FALSE}
+#install.packages("stargazer") If you haven't already installed. Install stargazer.
+library(stargazer)
+#Now use stargazer to format the linear model
+stargazer(mydata_2_des_noc, header = FALSE, iqr=T,
+          title = "Summary Statistics", digits = 1, out = "table1.txt",
+          no.space = TRUE, font.size = "footnotesize")
+```
+
+
+#Section II: Empirical analysis: The OLS Model
+
+
+Our central dependent variable is a country' trade policy in year *t*. We want to explain the changes of the extent of openness of the trade regime of the country on average. We use two ways of measuring trade policy. The first measure is a country's unweighted average statutory tariff rate (*TARIFF*). A decline of tariff rates indicates a more liberalized trade policy of a country. The mean of the statutory tariff rate is 21% between 1980 to 1999. However, it is poorly measured. This measurement may not be valid or reliable to capture the latent variables of the trade policy concept that I am interested in. In the periods of 1980s and 1990s, I still have 2683 missing values (14% of the total). I may end up drawing inaccurate inference due to the measurement problem.
+
+
+```{r Checking missing values, results='asis', echo = FALSE, message=FALSE, include=F}
+
+#table(mydata_2$Tariff, useNA="ifany") #The missing values from 1980 t0 1999: NA = 2683
+sum(mydata_2$Tariff == "  ", na.rm=T) #if there is any missing valus in the blank
+sum(mydata_2$Tariff, na.rm=T)
+2683/18628
+
+is.na(mydata_2)[1,] #From this, we can see only the variable "Tariff" has missing values
+
+##---
+
+mydata2_3<- subset(mydata2, Year <= 1979) #before 1979
+table(mydata2_3$Tariff, useNA="ifany") #The missing values: NA = 1780
+
+table(mydata2$Openness, useNA="ifany") #The missing values of openness: NA = 2580
+```
+
+My central independent variable is the type of political regime in place in a country in year *t*. As noted, the Polity Score ranging from -10 to 10 captures the institutional differences between democracies and autocracies regarding the fairness and openness of political competition and the size of the electorate. The mean of *Regime (Polity Score)* is -1.1, which indicates on average over this period a majority of these developing countries have mixes of democratic and autocratic features. It is later converted as a dichotomous variable *Democracy* with countries scoring below 6 in the Polity Score as autocracies (=0) and those above 6 as democracies (=1).        
+
+The correlation coefficient itself is simply a way to describe how the two variables vary together. Here, I first look at the bivariate relationship between the average tariff rate and polity score. The correlation coefficient *r* is -0.12. From Table 2, we can see there are negative relationships between the dependent variable, the independent variable and the control variables (except WTO members). It is noted that the covariate coefficients between the dependent variable, independent variable and cofounders are low. This correlation matrix provide evidence of a low possibility of the multicollinearity issue in the later regression analysis.
+
+
+```{r bivariate relationship, out.width = '85%', eval = TRUE, echo = FALSE, results = "hide", message = FALSE, warning = FALSE}
+
+plot (mydata2$Regime, mydata2$Tariff, col = "darkblue", pch = 20, xlab = "Regime Type (Polity Score)", ylab = "Tariff Rate (in percentage)",
+      main = "Bivariate Relationship bewtween \n Regime Type and Tariff Rate")
+
+OLS_1 <- lm(Tariff ~ Regime, data=mydata2)
+abline(OLS_1)
+
+r_tr <- cor(mydata2$Tariff, mydata2$Regime, use = "pairwise.complete.obs")
+
+rr <- mydata2$Regime[!is.na(mydata2$Regime)]
+rt <- mydata2$Tariff[!is.na(mydata2$Tariff)]
+
+text(quantile(rr, .95), quantile(rt, .99), paste("r=",round(r_tr,2)), font=2)
+```
+
+```{r bivariate relationship2, eval = TRUE, echo = FALSE, results = "hide", message = FALSE}
+Regime <- mydata2$Regime
+Tariff <- mydata2$Tariff
+lnGDP <- log(mydata2[,"GDP PC 95"])
+EC <- mydata2[,"Economic Crisis"]
+WTO <- mydata2[,"GATT/WTO"]
+YO <- mydata2[,"Years of Office"]
+
+matrix_cor <- data.frame(Tariff, Regime, lnGDP, EC, WTO, YO)
+#as.matrix(matrix_cor)
+```
+
+```{r bivariate relationship3, eval = TRUE, echo = FALSE, results = "hide", message = FALSE}
+rcor<-cor(matrix_cor,use="pairwise.complete.obs")
+for(i in 1:6){
+  for(j in 1:6){
+    if(j<i){rcor[i,j] <- NA}
+}}
+round(rcor,2)
+```
+
+```{r bivariate relationship print, eval = TRUE, echo = FALSE, results='hide', message = FALSE, warning = FALSE, include=FALSE}
+
+#install.packages("xtable",repos = "http://cran.us.r-project.org")
+library(xtable)
+names <- c("Tariff rate", "Regime (Polity Score)", "GDP per capita (log)", "Economic Crisis", "GATT/WTO Member", "Years of Office") 
+rownames(rcor) <- names
+TAB1<-round(rcor,2)
+xtable(TAB1)
+```
+
+```{r bivariate relationship print2, results = "asis", message = FALSE, warning = FALSE}
+print(xtable::xtable(rcor, caption = "Correlation Matirx: Correlations among Variables and Confounders"),type = "latex",
+      html.table.attributes="border=1")
+```
+
+
+Following Achen (2005)'s Rule of Three, I have laid out the reasons to control for the three covariates: GDP per capita, economic crisis and WTO membership. The fourth one, "year of office"" is added for additional check. Only covariates that meet the condition of affecting both the treatment and outcome variables confound the observed relationship between the two (Rubin, 1997; Achen, 1982). I hope that through control of these relevant covariates, the treatment effect of democratization is less cofounded. I lag all of the independent variables by one year to some extent account for the endogeneity issue. The basic OLS equation estimating the relationship between democracy and trade policy is:  
+
+$tradepolicy_{i,t} = \beta_0 + \beta_1*REGIME_{i,t-1} + \beta_2*GDPPC_{i,t-1} + \beta_3*ECCRISIS_{i,t-1} + \beta_4*WTO_{i,t-1} + \beta_5*OFFICE_{i,t-1} + \varepsilon_i$  
+
+
+Table 3 shows that on average more democratic regimes tend to have lower tariff rates. In almost all of the regressions, regime type is correctly signed, as expected. In equation (5), an expected 0.13 unit decrease in tariff rate (in percentage) for every one unit increase in democracy in Polity Score. Tariff rates expect to drop from about its mean at 20.8 percent to about 20.67 percent when the regime polity score increases by point 1. Moving from an absolute autocracy (-10) to a perfect democracy (10) induces 2.6 percent decline in tariffs.  
+
+```{r myregression OLS1, results='asis', echo = FALSE, results = "hide", message=FALSE, warning=FALSE}
+mydata3 <- mydata[,c(2,3,14,7,31,11,41,28,49,13,21,34), drop=F]
+colnames(mydata3) <- c("Country","Year","Tariff","Openness","Regime(t-1)","Democracy(t-1)","Dictator(t-1)","Years of Office(t-1)",
+                       "GATT/WTO(t-1)","Economic Crisis(t-1)","GDP PC 95(t-1)","IMF(t-1)")
+
+save(mydata3,file="mydata3_fulldatasetlagged1year.rda")
+
+Regime_l1 <- mydata3[,"Regime(t-1)"]
+WTO_l1 <- mydata3[,"GATT/WTO(t-1)"]
+YO_l1 <- mydata3[,"Years of Office(t-1)"]
+EC_l1 <- mydata3[,"Economic Crisis(t-1)"]
+IMF_l1 <- mydata3[,"IMF(t-1)"]
+GDP_l1 <- mydata3[,"GDP PC 95(t-1)"]
+lnGDP_l1 <- log(mydata3[,"GDP PC 95(t-1)"])
+
+OLS_3_0 <- lm(Tariff ~ Regime_l1, data=mydata3)
+summary(OLS_3_0)$coefficient
+
+OLS_3_1 <- lm(Tariff ~ Regime_l1 + log(GDP_l1), data=mydata3)
+#OLS_3_1_2 <- lm(Tariff ~ Regime_l1 + lnGDP_l1, data=mydata3)
+#summary(OLS_3_1)
+
+OLS_3_2 <- lm(Tariff ~ Regime_l1 + log(GDP_l1) + EC_l1, data=mydata3)
+#summary(OLS_3_2)
+
+OLS_3_3 <- lm(Tariff ~ Regime_l1 + log(GDP_l1) + WTO_l1, data=mydata3)
+#summary(OLS_3_3) #the closest
+
+#OLS_3_4_0 <- lm(Tariff ~ Regime_l1 + GDP_l1 + WTO_l1 + IMF_l1, data=mydata3)
+#summary(OLS_3_4)
+
+OLS_3_4 <- lm(Tariff ~ Regime_l1 + log(GDP_l1) + YO_l1, data=mydata3)
+#summary(OLS_3_4)
+
+OLS_3_5_0 <- lm(Tariff ~ Regime_l1 + log(GDP_l1) + EC_l1 + WTO_l1, data=mydata3)
+coef(OLS_3_5_0)
+
+#OLS_3_5_2 <- lm(Tariff ~ Regime_l1 + log(GDP_l1) + EC_l1 + WTO_l1 + YO_l1, data=mydata3)
+#summary(OLS_3_5_2)
+
+```
+
+
+```{r myregression OLS1 Table, results='asis', echo = FALSE, message = FALSE, warning=FALSE}
+
+library(stargazer)
+stargazer(OLS_3_1, OLS_3_2, OLS_3_3, OLS_3_4, OLS_3_5_0, header = FALSE, df = FALSE,
+          title = "Multiple Linear Regression Model: Results",
+          covariate.labels = c("Regime (Polity Score)", "GDP per capita", "Economic Crisis", "GATT/WTO Member", "Years of Office"),
+          dep.var.labels = "Tariff Rates", 
+          column.sep.width = "0.3pt", no.space = TRUE, font.size = "footnotesize")
+```
+
+Panel data may have problems that violate the standard assumptions necessary for ordinary least squares, so I will do statistical inference about an unobserved population by correcting for the standard errors with bootstrap method and panel-corrected robust standard errors in the next section. Before that, I will briefly discuss the advantages and potential problems of using the OLS.  
+
+
+What assumptions do we have about the unmeasured forces influencing the outcome variables? In the linear regression, we assume linearity as a function form of the measured regressors and the dependent variable. However, all it requires is the independent variables should not be *perfectly* collinear (Achen, 1982). I have checked this assumption in the various residual plots (figures are not shown). We also assume the unmeasured error terms are random. In a linear regression model, the dependent variable is a function of the observed independent variables and some unobserved factors represented by the disturbance term (Achen, 1982). These unobserved factors in the disturbance term need to be random. A different drawing from the disturbance may produce different values of dependent variable and hence different coefficients. This assumption will be revisited in a moment. According to Achen (1982), if these assumptions are met, the coefficient estimates from the OLS are consistent, meaning they will be very near to their true value in a large sample almost all the time. In other words, in general conditions, regression will produce fairly accurate estimates if we set up the model correctly. Great resilience is a strength of ordinary linear regression (Achen, 1982). That is probably why we should analyze our data with this powerful tool at the first place.
+
+
+```{r residual diagnostic plots 1 on non-linearity assumption, eval=T, echo=F, results="hide", include=F, message=F} 
+
+#Residual plot
+
+OLS_3_0 <- lm(Tariff ~ Regime, data=mydata2, na.action = na.exclude)
+OLS_3_res <- resid (OLS_3_0)
+plot(mydata2$Regime, OLS_3_res, ylab = "Residuals", xlab = "Regime", main = "Residual plots: Tariff")
+abline(0,0)
+
+#plot(OLS_3_0)
+
+# Evaluate Nonlinearity
+# component + residual plot
+library(car)
+
+crPlots(OLS_3_0)
+
+OLS_3_5 <- lm(Tariff ~ Regime_l1 + GDP_l1 + EC_l1 + WTO_l1 + YO_l1, data=mydata3, na.action = na.exclude)
+
+crPlots(OLS_3_5)
+# Ceres plots 
+#ceresPlots(OLS_3_5)
+##Comment: the variable GDP_l1 apparently is an issue, which needs to be transformed. Fix and check in the following "OLS_3_5_2."
+
+OLS_3_5_0 <- lm(Tariff ~ Regime_l1 + log(GDP_l1) + EC_l1 + WTO_l1, data=mydata3, na.action = na.exclude)
+
+crPlots(OLS_3_5_0)
+# Ceres plots 
+#ceresPlots(OLS_3_5_2)
+
+##Comment: The linearity assumption seems okay, except the economic crisis one. I will go back and fix it.
+
+```
+
+
+```{r residual diagnostic plots2, results='hide', echo = FALSE, message = FALSE, warning=FALSE, include=F}
+
+##plot the multiple variables (attempt to remove x2)
+
+OLS_3_1 <- lm(Tariff ~ Regime_l1 + GDP_l1, data=mydata3, na.action = na.exclude)
+OLS_3_1yres <- resid(OLS_3_1)
+OLS_3_1x1x2res <- resid(lm(Regime_l1 ~ GDP_l1,data=mydata3, na.action = na.exclude))
+OLS_3_1yx2res <- resid(lm(Tariff ~ GDP_l1,data=mydata3, na.action = na.exclude))
+
+#plot(resid(lm(x1 ~ x2)), resid(lm(y ~ x2)), frame = FALSE, col = "black", bg = "lightblue", pch = 21, cex = 2)
+#abline(lm(I(resid(lm(x1 ~ x2))) ~ I(resid(lm(y ~ x2)))), lwd = 2)
+
+plot(OLS_3_1x1x2res, OLS_3_1yx2res, frame = FALSE, col = "black", bg = "lightblue", pch = 21, cex = 2)
+abline(lm(I(OLS_3_1x1x2res) ~ I(OLS_3_1yx2res)), lwd = 2)
+
+##Comments: There are residual variabilities left after removing x2 (GDP_l1).
+```
+
+I am also concerned about the partial relationship between tariff rate and democracy score. I am interested in seeing what percent of the variation in the full multiple regression model (Model 4 in Table 3) cannot be explained by the independent variable but can be explained by the rest of the confounders.
+
+```{r model evaluation work on it later, results='hide', echo = FALSE, message = FALSE, warning=FALSE, include=F}
+
+#We may be interested in seeing what percent of the variation in the response cannot be explained by the predictors in the reduced model (i.e., the model OLS_3_1 specified by H0), but can be explained by the rest of the predictors in the full model (OLS_3_5_0).
+
+OLS_3_1 <- lm(Tariff ~ Regime_l1 + log(GDP_l1), data=mydata3,  na.action = na.exclude)
+OLS_3_5_0 <- lm(Tariff ~ Regime_l1 + log(GDP_l1) + EC_l1 + WTO_l1, data=mydata3, na.action = na.exclude)
+
+#anova(OLS_3_1, OLS_3_5_0)
+#warning: the sizes of the dataset are not the same. Need to fix it.
+```
+
+```{r summary of coefficients in binary variables, results='hide', echo = FALSE, message = FALSE, warning=FALSE, include=F}
+mydata4 <- mutate(mydata3, Regime_l1_Bi = 1*(Regime_l1 >= 6))
+
+
+OLS_3_0B <- lm(Tariff ~ Regime_l1_Bi, data=mydata4)
+summary(OLS_3_0B)$coefficient
+
+OLS_3_1B <- lm(Tariff ~ Regime_l1_Bi + log(GDP_l1), data=mydata4)
+summary(OLS_3_1B)$coefficient
+
+OLS_3_2B <- lm(Tariff ~ Regime_l1_Bi + log(GDP_l1) + EC_l1, data=mydata4)
+summary(OLS_3_2B)$coefficient
+
+OLS_3_3B <- lm(Tariff ~ Regime_l1_Bi + log(GDP_l1) + WTO_l1, data=mydata4)
+summary(OLS_3_3B)$coefficient #the closest
+
+#OLS_3_4_0 <- lm(Tariff ~ Regime_l1 + GDP_l1 + WTO_l1 + IMF_l1, data=mydata3)
+#summary(OLS_3_4)
+
+OLS_3_4B <- lm(Tariff ~ Regime_l1_Bi + log(GDP_l1) + YO_l1, data=mydata4)
+summary(OLS_3_4B)$coefficient
+
+
+OLS_3_5B <- lm(Tariff ~ Regime_l1_Bi + log(GDP_l1) + EC_l1 + WTO_l1, data=mydata4, na.action = na.exclude)
+summary(OLS_3_5B)$coefficient
+
+#The coefficient estimate summarizes the difference in average tariff rates between the democratic countries and non-democratic countries. Democratic countries will have 0.3% tariff rates lower on average than non-democratice countries. 
+```
+
+```{r prepare a test small dataset, eval=T, echo=F, results="hide", warning=F} 
+
+mydata4 <- mydata3
+Regime_l1 <- mydata3[,"Regime(t-1)"]
+
+## Recode this variable into 1= "democracy (polity score is 6 or more) or more" versus 0="non-democracy (polity score is 6 or less)'' category:
+mydata4 <- mutate(mydata3, Regime_l1_Bi = 1*(Regime_l1 >= 6))
+#Check the recoding
+with(mydata4, table(Regime_l1_Bi, Regime_l1,useNA="ifany"))
+#I turned Polity's Regime variable into a dichotomous variable with countries scoring below 6 as autocracies and those above 6 as democracies (=1).
+
+save(mydata4,file="mydata4.rda")
+
+row.has.na <- apply(mydata4, 1, function(x){any(is.na(x))})
+sum(row.has.na)
+mydata4_small <- mydata4[!row.has.na,]
+summary(mydata4_small)
+nrow(mydata4)#5370
+nrow(mydata4_small)#662
+
+```
+
+```{r try binary variables in small dataset, results='hide', echo = FALSE, message = FALSE, warning=FALSE, include=F}
+
+Regime_l1_Bi_s <- mydata4_small$Regime_l1_Bi
+GDP_l1_s <- mydata4_small$`GDP PC 95(t-1)`
+EC_l1_s <- mydata4_small$`Economic Crisis(t-1)`
+WTO_l1_s <- mydata4_small$`GATT/WTO(t-1)`
+YO_l1_s <- mydata4_small$`Years of Office(t-1)`
+
+OLS_3_0Bs <- lm(Tariff ~ Regime_l1_Bi_s, data=mydata4_small)
+summary(OLS_3_0Bs)$coefficient #-3.054
+
+OLS_3_1Bs <- lm(Tariff ~ Regime_l1_Bi_s + log(GDP_l1_s), data=mydata4_small)
+summary(OLS_3_1Bs)$coefficient #0.09
+
+OLS_3_2Bs <- lm(Tariff ~ Regime_l1_Bi_s + log(GDP_l1_s) + EC_l1_s, data=mydata4_small)
+summary(OLS_3_2Bs)$coefficient #0.81
+
+OLS_3_3Bs <- lm(Tariff ~ Regime_l1_Bi_s + log(GDP_l1_s) + WTO_l1_s, data=mydata4_small)
+summary(OLS_3_3Bs)$coefficient #-0.12
+
+#OLS_3_4_0 <- lm(Tariff ~ Regime_l1 + GDP_l1 + WTO_l1 + IMF_l1, data=mydata3)
+#summary(OLS_3_4)
+
+OLS_3_4Bs <- lm(Tariff ~ Regime_l1_Bi_s + log(GDP_l1_s) + YO_l1_s, data=mydata4_small)
+summary(OLS_3_4Bs)$coefficient #-1.37
+
+
+OLS_3_5Bs <- lm(Tariff ~ Regime_l1_Bi_s + log(GDP_l1_s) + EC_l1_s + WTO_l1_s, data=mydata4_small, na.action = na.exclude)
+summary(OLS_3_5Bs)$coefficient #0.58
+
+#Here, the sign for Regime_l1_Bi_s has flipped. Simpson's Paradox problem might exist: For example, if you have a categorical and continuous predictor then the continuous predictor could easily flip sign if the categorical one is added and within each category the sign is different than for the overall score. https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2266743/
+```
+
+```{r find a better modelling strategy lmrob, results='hide', echo = FALSE, message = FALSE, warning=FALSE, include=F}
+
+require(MASS)
+require(robustbase)
+summary(OLS_3_5Bs)$coefficient ## lm model
+
+
+lmrob_5Bs <- lmrob(Tariff ~ Regime_l1_Bi_s + log(GDP_l1_s) + EC_l1_s + WTO_l1_s, data=mydata4_small, control = lmrob.control(max.it = 100))
+summary(lmrob_5Bs)$coefficient## lmrob model, all in correct signs
+
+#In regression modeling, lmrob is a robust statistics, which could be considered to handle unusual observations that do not follow the general trend of the data set. 'Robust' means that the tests have good power for a wide variety of distributions.
+
+#The lmrob output from the lmrob function provides 'Robustness weights' to give us information about the outliers in observations by evaluating their weight and summarize statistics from  the remaining observations.
+
+
+```
+
+#Let us try a different modelling strategy.
+
+In regression modeling, lmrob is a robust statistics, which could be considered to handle unusual observations that do not follow the general trend of the data set. 'Robust' means that the tests have good power for a wide variety of distributions. The lmrob output from the lmrob function provides 'Robustness weights' to give us information about the outliers in observations by evaluating their weight and summarize statistics from the remaining observations.
+
+Here, the coefficient sign for Democracy has flipped. Simpson's Paradox problem might exist: For example, if you have a categorical and continuous predictor then the continuous predictor could easily flip sign if the categorical one is added and within each category the sign is different than for the overall score. (https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2266743/)
+
+#may need to fix it later
+
+
+```{r a better modelling strategy lmrob can put in table, results='hide', echo = FALSE, message = FALSE, warning=FALSE, include=F}
+
+lmrob_0Bs <- lmrob(Tariff ~ Regime_l1_Bi_s, data=mydata4_small, control = lmrob.control(max.it = 100))
+summary(lmrob_0Bs)$coefficient #-4.57
+
+lmrob_1Bs <- lm(Tariff ~ Regime_l1_Bi_s + log(GDP_l1_s), data=mydata4_small, control = lmrob.control(max.it = 100))
+summary(lmrob_1Bs)$coefficient #0.09
+
+lmrob_2Bs <- lm(Tariff ~ Regime_l1_Bi_s + log(GDP_l1_s) + EC_l1_s, data=mydata4_small, control = lmrob.control(max.it = 100))
+summary(lmrob_2Bs)$coefficient #0.81
+
+lmrob_3Bs <- lm(Tariff ~ Regime_l1_Bi_s + log(GDP_l1_s) + WTO_l1_s, data=mydata4_small, control = lmrob.control(max.it = 100))
+summary(lmrob_3Bs)$coefficient #-0.11
+
+lmrob_4Bs <- lm(Tariff ~ Regime_l1_Bi_s + log(GDP_l1_s) + YO_l1_s, data=mydata4_small, control = lmrob.control(max.it = 100))
+summary(lmrob_4Bs)$coefficient #-1.37
+
+lmrob_5Bs <- lmrob(Tariff ~ Regime_l1_Bi_s + log(GDP_l1_s) + EC_l1_s + WTO_l1_s, data=mydata4_small, control = lmrob.control(max.it = 100))
+summary(lmrob_5Bs)$coefficient #-1.37
+
+```
+
+```{r myregression lmrob Table 2, results='asis', echo = FALSE, message = FALSE, warning=FALSE}
+
+library(stargazer)
+stargazer(lmrob_0Bs, lmrob_1Bs, lmrob_2Bs, lmrob_3Bs, lmrob_4Bs, lmrob_5Bs, header = FALSE, df = FALSE,
+          title = "Multiple Linear Regression Model: Results",
+          covariate.labels = c("Democracy", "GDP per capita", "Economic Crisis", "GATT/WTO Member", "Years of Office"),
+          dep.var.labels = "Tariff Rates", 
+          column.sep.width = "0.3pt", no.space = TRUE, font.size = "footnotesize")
+```
