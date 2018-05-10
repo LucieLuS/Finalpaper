@@ -1177,16 +1177,84 @@ CIUniroot
 ```
 
 
-mytest3ForUniRoot_test<-function(x,y=mydata4_small$Tariff,z=mydata4_small$Regime_l1_Bi){
-			 newy<-y-(z*x)
-			 .05-summary(lmrob(newy~ z + log(GDP_l1_s) + EC_l1_s + WTO_l1_s, data=mydata4_small))$coef["z","Pr(>|t|)"]
+
+```{r bootstrapping confidence interval}
+
+OLS_3_5Bs <- lm(Tariff ~ Regime_l1_Bi_s + log(GDP_l1_s) + EC_l1_s + WTO_l1_s, data=mydata4_small, na.action = na.exclude)
+#662
+summary(OLS_3_5Bs)
+coef(OLS_3_5Bs)[2]
+
+set.seed (20892380)
+
+beta.obs.boot <- numeric (10000)
+
+#origin.fit <- fitted(origin)
+#origin.resid <- resid(origin)
+for (i in 1: 10000){
+  this.ind <- sample (662, 662, replace = TRUE)
+  beta.obs.boot[i] <- coef(lm(mydata4_small$Tariff[this.ind] ~ mydata4_small$Regime_l1_Bi[this.ind] + log(GDP_l1_s)[this.ind] + EC_l1_s[this.ind] + WTO_l1_s[this.ind]))[2]
 }
 
-#mytest3ForUniRoot_test(20)
-#mytest3ForUniRoot(-20)
-upperlim<-uniroot(mytest3ForUniRoot_test,interval=c(0,20),extendInt="no")
-lowerlim<-uniroot(mytest3ForUniRoot_test,interval=c(-20,0),extendInt="no")
-c(lowerlim$root,upperlim$root)
+plot(density(beta.obs.boot), lwd=3, col = "steelblue")
+#v=as.numeric(coef(OLS_3_5Bs)[2])
+abline(v=as.numeric(coef(OLS_3_5Bs)[2]), lwd=3, col= "gold")
+
+quantile(beta.obs.boot,c(.025,.975))
+CI_m1 <- round(quantile(beta.obs.boot,c(.025,.975)), 2)
+#[-1.90, 3.11]
+
+```
+
+```{r bootstrapping confidence interval for lm}
+
+set.seed(20892380)
+
+nsamps<-10000
+
+resample_original<-data.frame(t
+                              (replicate(nsamps,
+      coef(lm(Tariff ~ Regime_l1_Bi_s + log(GDP_l1_s) + EC_l1_s + WTO_l1_s,
+              data=sample_n(mydata4_small[,c("Regime_l1_Bi","Tariff")],size=662,replace=TRUE))))))
+
+quantile(resample_original[,"Regime_l1_Bi_s"],c(.025,.975))
+
+CI_m2 <- round(quantile(resample_original[,"Regime_l1_Bi_s"],c(.025,.975)),2)
+
+#[-2.54, 2.51]
+
+```
+
+```{r coverage rate}
+
+```
+
+
+```{r bootstrap hypothesis test}
+theta.hat <- summary(OLS_3_5Bs)$coef[2,1]
+
+set.seed(19900814)
+
+n <- length (mydata4_small)
+nboot <- 10000
+theta.star <- double(nboot)
+
+for(i in 1:nboot){
+  k <- sample(1:n, replace = T)
+  theta.star[i] <- summary(lm((Tariff[k] ~ Regime_l1_Bi[k] + log(GDP_l1_s)[k] + EC_l1_s[k] + WTO_l1_s[k]), data=mydata4_small))$coef[2,1]
+}
+
+# lower-tailed test of theta = 0
+ltpv <- mean(theta.star <= 0)
+ltpv
+#0.9902
+
+# upper-tailed test of theta = 0
+utpv <- 1 - ltpv
+utpv
+#0.0098
+```
+
 
 ##Statistical Inference 
 
