@@ -755,6 +755,7 @@ sd
 MSE <- apply(estdists[1:3,],1,function(x){ mean( ( x - trueATE)^2 ) })
 MSE
 ```
+
 ```{r bivariate relationship table0, eval = TRUE, echo = FALSE, results='hide', message = FALSE, warning = FALSE, include=FALSE}
 
 #install.packages("xtable",repos = "http://cran.us.r-project.org")
@@ -798,7 +799,7 @@ points(c(sampdistmeans[1:3],estATEunbiased_3_5Bs,estATEbest_3_5Bs), rep(0,5),
 
 
 
-```{r try randomization and p-value for lm, results='hide', echo = FALSE, message = FALSE, warning=FALSE, include=F}
+```{r randomization and p-value for lm, results='hide', echo = FALSE, message = FALSE, warning=FALSE, include=F}
 
 
 OLS_3_5Bs <- lm(Tariff ~ Regime_l1_Bi_s + log(GDP_l1_s) + EC_l1_s + WTO_l1_s, data=mydata4_small, na.action = na.exclude)
@@ -832,7 +833,7 @@ pvalue_lm #0.2996
 ```
 
 
-```{r try randomization and p-value for lmrob, results='hide', echo = FALSE, message = FALSE, warning=FALSE, include=F}
+```{r randomization and p-value for lmrob, results='hide', echo = FALSE, message = FALSE, warning=FALSE, include=F}
 
 lmrob_5Bs <- lmrob(Tariff ~ Regime_l1_Bi_s + log(GDP_l1_s) + EC_l1_s + WTO_l1_s, data=mydata4_small, control = lmrob.control(max.it = 100))
 
@@ -1071,8 +1072,10 @@ In a given sample size, the lmrob model has larger statistical power given an ef
 
 #Under lm assumption:
 confint(OLS_3_5Bs, parm="Regime_l1_Bi_s")
+cicanned_lm <- round(confint(OLS_3_5Bs, parm="Regime_l1_Bi_s"),2)
 
 
+#############
 mytest2ForUniRoot_test<-function(x,y=mydata4_small$Tariff,z=mydata4_small$Regime_l1_Bi){
 			 newy<-y-(z*x)
 			 .05-summary(lm(newy~ z + log(GDP_l1_s) + EC_l1_s + WTO_l1_s, data=mydata4_small))$coef["z","Pr(>|t|)"]
@@ -1082,7 +1085,7 @@ mytest2ForUniRoot_test<-function(x,y=mydata4_small$Tariff,z=mydata4_small$Regime
 #mytest2ForUniRoot(-20)
 upperlim<-uniroot(mytest2ForUniRoot_test,interval=c(0,20),extendInt="no")
 lowerlim<-uniroot(mytest2ForUniRoot_test,interval=c(-20,0),extendInt="no")
-c(lowerlim$root,upperlim$root)
+ciroot_lm <- round(c(lowerlim$root,upperlim$root),2)
 
 
 #This is another way to find the confidence interval using uniroot. The function here is still about each new H0 as shown before. The difference is  ".05-summary(lm(newy~z+s))$coef["z","Pr(>|t|)"]".0.05 is the significance level, this line of code will generate positive results if the p value of certain hypothesis is less than 5%, leading to the rejection of that hypothesis.
@@ -1091,6 +1094,8 @@ c(lowerlim$root,upperlim$root)
 ### The root means the solution that makes a function equal to 0, and uniroot command is telling R to find only one solution. Second, the upperlim and lowerlim represent the two-tail test. Both upperlim and lowerlim tell R to search only one root from the interval 0 to 20 or -20 to 0. 
 ###"extendInt=No" is telling R not extend search if a different sign cannot be found. In other words, returning to "error" if R cannot find the root with different sign.
 
+cicanned_lm 
+ciroot_lm
 ```
 
 
@@ -1102,6 +1107,9 @@ lmrob_5Bs <- lmrob(Tariff ~ Regime_l1_Bi_s + log(GDP_l1_s) + EC_l1_s + WTO_l1_s,
 
 confint(lmrob_5Bs, parm="Regime_l1_Bi_s")
 
+cicanned_lmrob <- round (confint(lmrob_5Bs, parm="Regime_l1_Bi_s"), 2)
+
+##############
 
 mytest3ForUniRoot_test<-function(x,y=mydata4_small$Tariff,z=mydata4_small$Regime_l1_Bi){
 			 newy<-y-(z*x)
@@ -1112,10 +1120,62 @@ mytest3ForUniRoot_test<-function(x,y=mydata4_small$Tariff,z=mydata4_small$Regime
 #mytest3ForUniRoot(-20)
 upperlim<-uniroot(mytest3ForUniRoot_test,interval=c(0,20),extendInt="no")
 lowerlim<-uniroot(mytest3ForUniRoot_test,interval=c(-20,0),extendInt="no")
-c(lowerlim$root,upperlim$root)
+ciroot_lmrob <- round(c(lowerlim$root,upperlim$root),2)
+
+cicanned_lmrob
+ciroot_lmrob
 ```
 
-```{r Confidence Interval using pvalue, results='hide', echo = FALSE, message = FALSE, warning=FALSE, include=F}
+```{r Confidence Interval lm using pvalue, results='hide', echo = FALSE, message = FALSE, warning=FALSE, include=F}
+
+## Confidence interval: choose alpha=.05
+set.seed(2349854)
+
+#OLS_3_5Bs <- lm(Tariff ~ Regime_l1_Bi_s + log(GDP_l1_s) + EC_l1_s + WTO_l1_s, data=mydata4_small, na.action = na.exclude)
+#simlmtest_lm5Bs <- summary(OLS_3_5Bs)$coef[2,1]
+#simlmtest_lm5Bs #0.5762
+
+
+#Imagine we re-run the "experiment"
+newExp_lm<-function(y){
+  ## A function to randomly assign treatment effect
+shuffledz <- sample(mydata4_small$Z) 
+newlmtest <- coef(lm(y ~ shuffledz+ log(GDP_l1_s) + EC_l1_s + WTO_l1_s, data=mydata4_small))[["shuffledz"]]
+  return(newlmtest)
+}
+
+myTestStat4_lm<-function(x,newz=shuffledz,y=mydata4_small$Tariff){
+  shuffledz <- sample(mydata4_small$Z) 
+  newy<-y-(newz*x)
+	coef(lm(newy~ newz + log(GDP_l1_s) + EC_l1_s + WTO_l1_s, data=mydata4_small))[["newz"]]
+}
+
+MyFisherTest4_lm <- function(x,thez){
+  ## return a p-value
+  randDistH0<-replicate(1000,myTestStat4_lm(x=x))
+  pTwoSided <- 2*min(c(mean(randDistH0>=simlmtest_lm5Bs),
+		      mean(randDistH0<=simlmtest_lm5Bs)))
+  return(pTwoSided)
+}
+#######
+######
+library(foreach)
+res1<-foreach(h=seq(-5,5,0.5),.combine='c') %dopar% {message("."); MyFisherTest4_lm(x=h, thez=mydata4_small$Regime_l1_Bi)}
+#Now I can use foreach to execute the function repeatedly, passing it the values -10 through 5, and returning the results in a list, called x
+
+
+printCIres1lm <- rbind(seq(-5,5,0.5),res1)
+printCIres1lm
+
+#CI for lm by using using permutation here is [-2.5, 1.5].
+```
+
+```{r Confidence Interval lmrob using pvalue, results='hide', echo = FALSE, message = FALSE, warning=FALSE, include=F}
+
+lmrob_5Bs <- lmrob(Tariff ~ Regime_l1_Bi_s + log(GDP_l1_s) + EC_l1_s + WTO_l1_s, data=mydata4_small, control = lmrob.control(max.it = 100))
+
+simlmrobtest_5Bs <- summary(lmrob_5Bs)$coef[2,1]
+simlmrobtest_5Bs
 
 ## Confidence interval: choose alpha=.05
 set.seed(2349854)
@@ -1143,15 +1203,49 @@ MyFisherTest4 <- function(x,thez){
 #######
 ######
 #library(foreach)
-res1<-foreach(h=seq(-5,5,0.5),.combine='c') %dopar% {message("."); MyFisherTest4(x=h, thez=mydata4_small$Regime_l1_Bi)}
+res1_lmrob<-foreach(h=seq(-5,5,0.5),.combine='c') %dopar% {message("."); MyFisherTest4(x=h, thez=mydata4_small$Regime_l1_Bi)}
 #Now I can use foreach to execute the function repeatedly, passing it the values -10 through 5, and returning the results in a list, called x
 
 
-printCIres1 <- rbind(seq(-5,5,0.5),res1)
-printCIres1
+printCIres1lmrob <- rbind(seq(-5,5,0.5),res1_lmrob)
+printCIres1lmrob
 
-#CI here is [0,3] 
+#CI here is [0,3].
 ```
+```{r create Xtable to collect p-values and confidence interval}
+
+
+ci_permute <- round(as.matrix(rbind(printCIres1lm, res1_lmrob)),2)
+ci_permute
+
+xtable(ci_permute)
+
+print(xtable::xtable(ci_permute, caption = "Searching for non-rejected intervals under permuation for lm and lmrob models"),type = "latex",
+      html.table.attributes="border=1")
+
+ci_permute_lm <- c(-2.5, 1.5)
+ci_permute_lmrob <- c(0, 3)
+```
+
+```{r create Xtable to collect p-values and confidence interval 2}
+#######
+collect_ci <- as.matrix(rbind(cicanned_lm, ciroot_lm, cicanned_lmrob,ciroot_lmrob))
+collect_ci
+
+collect_ci_test <- as.matrix(rbind(collect_ci, ci_permute_lm, ci_permute_lmrob))
+
+collect_ci_test
+
+#install.packages("xtable",repos = "http://cran.us.r-project.org")
+library(xtable)
+
+xtable(collect_ci_test)
+
+print(xtable::xtable(collect_ci_test, caption = "Collections of Confudence Intervals under pumutation for lm and lmrob models"),type = "latex",
+      html.table.attributes="border=1")
+
+```
+
 
 ```{r, eval=F}
 
@@ -1183,7 +1277,7 @@ CIUniroot
 OLS_3_5Bs <- lm(Tariff ~ Regime_l1_Bi_s + log(GDP_l1_s) + EC_l1_s + WTO_l1_s, data=mydata4_small, na.action = na.exclude)
 #662
 summary(OLS_3_5Bs)
-coef(OLS_3_5Bs)[2]
+coef(OLS_3_5Bs)[2] #0.5762
 
 set.seed (20892380)
 
@@ -1200,30 +1294,45 @@ plot(density(beta.obs.boot), lwd=3, col = "steelblue")
 #v=as.numeric(coef(OLS_3_5Bs)[2])
 abline(v=as.numeric(coef(OLS_3_5Bs)[2]), lwd=3, col= "gold")
 
+#bootstrap percentil interval
 quantile(beta.obs.boot,c(.025,.975))
-CI_m1 <- round(quantile(beta.obs.boot,c(.025,.975)), 2)
+CI_lm_m1 <- round(quantile(beta.obs.boot,c(.025,.975)), 2)
+CI_lm_m1
 #[-1.90, 3.11]
 
+
+ 
 ```
 
 ```{r bootstrapping confidence interval for lm}
+set.seed (20892380)
 
-set.seed(20892380)
+par(mfrow=c(2,2))
+
+#bootstrap 4 times
+for (i in 1:4){
 
 nsamps<-10000
-
 resample_original<-data.frame(t
                               (replicate(nsamps,
       coef(lm(Tariff ~ Regime_l1_Bi_s + log(GDP_l1_s) + EC_l1_s + WTO_l1_s,
               data=sample_n(mydata4_small[,c("Regime_l1_Bi","Tariff")],size=662,replace=TRUE))))))
 
+  plot(density(resample_original$Regime_l1_Bi_s), main = "Distribution of the test statistic using bootstrap approach")
+
+}
+
+#bootstrap percentile interval
 quantile(resample_original[,"Regime_l1_Bi_s"],c(.025,.975))
 
-CI_m2 <- round(quantile(resample_original[,"Regime_l1_Bi_s"],c(.025,.975)),2)
+CI_lm_m2 <- round(quantile(resample_original[,"Regime_l1_Bi_s"],c(.025,.975)),2)
 
-#[-2.54, 2.51]
+CI_lm_m2
+#[-2.53, 2.48]
 
 ```
+
+
 
 ```{r coverage rate}
 
@@ -1233,27 +1342,67 @@ CI_m2 <- round(quantile(resample_original[,"Regime_l1_Bi_s"],c(.025,.975)),2)
 ```{r bootstrap hypothesis test}
 theta.hat <- summary(OLS_3_5Bs)$coef[2,1]
 
+#null: H0: theta.hat=0
+
 set.seed(19900814)
 
-n <- length (mydata4_small)
+n <- nrow (mydata4_small)
 nboot <- 10000
 theta.star <- double(nboot)
 
+#Draw a bootstrap sample of the total observations with replacement
 for(i in 1:nboot){
   k <- sample(1:n, replace = T)
   theta.star[i] <- summary(lm((Tariff[k] ~ Regime_l1_Bi[k] + log(GDP_l1_s)[k] + EC_l1_s[k] + WTO_l1_s[k]), data=mydata4_small))$coef[2,1]
 }
+
+#theta.star is a vector of the observed values of the test statistic calculated for bootstrap samples.
 
 # lower-tailed test of theta = 0
 ltpv <- mean(theta.star <= 0)
 ltpv
 #0.9902
 
+mean (theta.hat < theta.star)
+
+
 # upper-tailed test of theta = 0
 utpv <- 1 - ltpv
 utpv
 #0.0098
+#one-sided p-value
+
+#The lower-tailed P-value is the ?? such that the ??-th quantile of the distribution of the bootstrap samples theta.star is equal to the hypothesized value of the parameter under the null hypothesis (here zero).
+
+## upper-tailed test of theta = 0
+2 * min(ltpv, 1 - ltpv) 
+#0.02 is the two-sided p-value
 ```
+
+
+set.seed (20892380)
+
+beta.obs.boot <- numeric (10000)
+
+#origin.fit <- fitted(origin)
+#origin.resid <- resid(origin)
+for (i in 1: 10000){
+  this.ind <- sample (662, 662, replace = TRUE)
+  beta.obs.boot[i] <- coef(lm(mydata4_small$Tariff[this.ind] ~ mydata4_small$Regime_l1_Bi[this.ind] + log(GDP_l1_s)[this.ind] + EC_l1_s[this.ind] + WTO_l1_s[this.ind]))[2]
+}
+
+plot(density(beta.obs.boot), lwd=3, col = "steelblue")
+#v=as.numeric(coef(OLS_3_5Bs)[2])
+abline(v=as.numeric(coef(OLS_3_5Bs)[2]), lwd=3, col= "gold")
+
+#bootstrap percentil interval
+quantile(beta.obs.boot,c(.025,.975))
+CI_lm_m1 <- round(quantile(beta.obs.boot,c(.025,.975)), 2)
+CI_lm_m1
+#[-1.90, 3.11]
+
+
+
 
 
 ##Statistical Inference 
