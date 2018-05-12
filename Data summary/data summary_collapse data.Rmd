@@ -91,6 +91,10 @@ library(gplots)
 library(lmtest)
 library(sandwich)
 
+library(tidyverse)
+
+library(MASS)
+library(robustbase)
 ```
 
 
@@ -132,6 +136,9 @@ result_m_tariff
 #plot(result_m_tariff)
 
 ```
+
+
+
 
 More evidence of trade liberalization comes from a second measure of trade policy: the dichotomous categorization of countries into open and closed trade regimes. The data covers ninety developing countries from 1980 to 1999. In 1980, only 14 countries were scored as openness, while in 1999, 62 countries were open economies. The number of a country classified as open economy has increased by three times.
 
@@ -599,3 +606,110 @@ stargazer(lmrob_0Bs, lmrob_1Bs, lmrob_2Bs, lmrob_3Bs, lmrob_4Bs, lmrob_5Bs, head
           dep.var.labels = "Tariff Rates", 
           column.sep.width = "0.3pt", no.space = TRUE, font.size = "footnotesize")
 ```
+
+
+```{r try collapsing data, results='hide', echo = FALSE, message = FALSE, warning=FALSE, include=F}
+
+#getwd()
+#list.files()
+load(file="C:/Users/Lucie Lu/Documents/531-explorations/Finalpaper/Data/mydata4_NAremoved.rda")
+
+
+mydata_5 <- mydata4_small %>%
+  group_by(Country) %>%
+  summarize(Tariff_c = mean(Tariff),
+            Regime_c = mean(`Regime(t-1)`),
+            YearOffice_c = mean(`Years of Office(t-1)`),
+            WTO_c = mean(`GATT/WTO(t-1)`),
+          EC_c = mean(`Economic Crisis(t-1)`),
+          GDP_c = mean(`GDP PC 95(t-1)`),
+          IMF_c = mean(`IMF(t-1)`))
+
+
+#the number of observations in each cluster
+mydata4_small %>%
+  group_by(Country) %>%
+  summarize(no_obs=n())
+
+mydata_5 <- mutate(mydata_5, Regime_Bi_c = 1*(Regime_c >= 6))
+
+
+save(mydata_5,file="mydata_5collapseyear.rda")
+
+```
+
+```{r OLS2 continus, results='hide', echo = FALSE, message = FALSE, warning=FALSE, include=F }
+
+OLS_5_0 <- lm(Tariff_c ~ Regime_c, data=mydata_5)
+summary(OLS_5_0)$coefficient #-0.2992 as expected
+
+OLS_5_1 <- lm(Tariff_c ~ Regime_c + log(GDP_c), data=mydata_5)
+summary(OLS_5_1)$coefficient # -0.07
+
+OLS_5_2 <- lm(Tariff_c ~ Regime_c + log(GDP_c) + EC_c, data=mydata_5)
+summary(OLS_5_2)$coefficient #-0.03 
+
+OLS_5_3 <- lm(Tariff_c ~ Regime_c + log(GDP_c) + WTO_c, data=mydata_5)
+summary(OLS_5_3)$coefficient #-0.1
+
+OLS_5_4 <- lm(Tariff_c ~ Regime_c + log(GDP_c) + YearOffice_c, data=mydata_5)
+summary(OLS_5_4)$coefficient #-0.01
+
+OLS_5_5 <- lm(Tariff_c ~ Regime_c + log(GDP_c) + EC_c + WTO_c, data=mydata_5, na.action = na.exclude)
+summary(OLS_5_5)$coefficient # -0.07
+
+```
+
+
+```{r OLS2 binary, results='hide', echo = FALSE, message = FALSE, warning=FALSE, include=F }
+#comparing democracy and non-democracy
+OLS_5_0Bs <- lm(Tariff_c ~ Regime_Bi_c, data=mydata_5)
+summary(OLS_5_0Bs)$coefficient #-4.287 
+
+OLS_5_1Bs <- lm(Tariff_c ~ Regime_Bi_c + GDP_c, data=mydata_5)
+summary(OLS_5_1Bs)$coefficient # -1.748 
+
+OLS_5_2Bs <- lm(Tariff_c ~ Regime_Bi_c + GDP_c + EC_c, data=mydata_5)
+summary(OLS_5_2Bs)$coefficient #-1.832 
+
+OLS_5_3Bs <- lm(Tariff_c ~ Regime_Bi_c + GDP_c + WTO_c, data=mydata_5)
+summary(OLS_5_3Bs)$coefficient #-1.882
+
+OLS_5_4Bs <- lm(Tariff_c ~ Regime_Bi_c + GDP_c + YearOffice_c, data=mydata_5)
+summary(OLS_5_4Bs)$coefficient #-2.00314
+
+OLS_5_5Bs <- lm(Tariff_c ~ Regime_Bi_c + GDP_c + EC_c + WTO_c, data=mydata_5, na.action = na.exclude)
+summary(OLS_5_5Bs)$coefficient # -1.992
+```
+
+```{r}
+
+
+plot (mydata_5$Regime_c, mydata_5$Tariff_c, col = "darkblue", pch = 20, xlab = "Regime Type (Polity Score)", ylab = "Tariff Rate (in percentage)",
+      main = "Bivariate Relationship bewtween \n Regime Type and Tariff Rate")
+```
+
+
+```{r a better modelling strategy lmrob can put in table, results='hide', echo = FALSE, message = FALSE, warning=FALSE, include=F}
+
+#3 observations are outliers
+lmrob_5_0Bs <- lmrob(Tariff_c ~ Regime_Bi_c, data=mydata_5, control = lmrob.control(max.it = 100))
+summary(lmrob_5_0Bs)$coefficient #-4.58
+
+lmrob_5_1Bs <- lmrob(Tariff_c ~ Regime_Bi_c + GDP_c, data=mydata_5, control = lmrob.control(max.it = 100))
+summary(lmrob_5_1Bs)$coefficient #-3.43
+
+lmrob_5_2Bs <- lmrob(Tariff_c ~ Regime_Bi_c + GDP_c + EC_c, data=mydata_5, control = lmrob.control(max.it = 100))
+summary(lmrob_5_2Bs)$coefficient #-3.48
+
+lmrob_5_3Bs <- lmrob(Tariff_c ~ Regime_Bi_c + GDP_c + WTO_c, data=mydata_5, control = lmrob.control(max.it = 100))
+summary(lmrob_5_3Bs)$coefficient #-3.44
+
+lmrob_5_4Bs <- lmrob(Tariff_c ~ Regime_Bi_c + GDP_c + YearOffice_c, data=mydata_5, control = lmrob.control(max.it = 100))
+summary(lmrob_5_4Bs)$coefficient #-2.66
+
+lmrob_5_5Bs <- lmrob(Tariff_c ~ Regime_Bi_c + GDP_c + EC_c + WTO_c, data=mydata_5, control = lmrob.control(max.it = 100))
+summary(lmrob_5_5Bs)$coefficient #-3.5
+
+```
+
