@@ -713,3 +713,36 @@ summary(lmrob_5_5Bs)$coefficient #-3.5
 
 ```
 
+
+      
+```{r justify why I collapse data by years, results='hide', echo = FALSE, message = FALSE, warning=FALSE, include=F}
+mydata4_small$countryF<-factor(mydata4_small$Country) 
+
+countryMeans<-with(mydata4_small,tapply(Tariff,countryF,mean)) 
+acrosscountries<-var(countryMeans)
+withincountries<-mean(with(mydata4_small,tapply(Tariff,countryF,var)), na.rm = T)
+#This code gives the mean of within-country (grouped by countryF) variance
+
+#Across-country variance is around 1.7 times of the within-country-years variance. It means that differences across countries are higher than differences across years within each country.
+acrosscountries #123.7
+withincountries #70.71
+
+#Interclass correlation (Gilman & Hill, p. 258): the relative values of country- and year-level variances variances. In this case, the interclass correlation 0.63 suggests that differences acorss countries convey more information than differences across years within a country. 
+withincountries/(acrosscountries+withincountries) #0.36
+acrosscountries/(acrosscountries+withincountries) #0.63
+
+#install.packages("ICC")
+library(ICC)
+ICC_wc <- ICCbare(y=Tariff,x=countryF,data=mydata4_small) #0.63
+ICC_wc
+# It is a method of Simple Estimation of the Intraclass Correlation Coefficient. The ICC score describes how strongly units in the same group resemble each other.
+# High intraclass correlation means values(y) from the same group tend to be similar. The variance within countries is quite high with ICC score 0.63. This suggests that within a country, a country's tariff levels have not changed much across years.
+
+#install.packages("rmngb")
+library(rmngb)
+boxplot(mydata4_small$Tariff ~ mydata4_small$countryF)
+## to visualize variances accross countries
+
+boxplot(mydata4_small$Tariff ~ mydata4_small$Year)
+## to visualize variances accross years
+```
