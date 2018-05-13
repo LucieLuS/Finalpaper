@@ -79,6 +79,8 @@ getwd()
 library(readstata13)
 library(dplyr)
 library(ggplot2)
+#install.packages("ggrepel")
+library(ggrepel)
 library(stargazer)
 
 #install.packages("devtools")
@@ -95,6 +97,9 @@ library(tidyverse)
 
 library(MASS)
 library(robustbase)
+
+#install.packages("rmngb")
+library(rmngb)
 ```
 
 
@@ -136,8 +141,6 @@ result_m_tariff
 #plot(result_m_tariff)
 
 ```
-
-
 
 
 More evidence of trade liberalization comes from a second measure of trade policy: the dichotomous categorization of countries into open and closed trade regimes. The data covers ninety developing countries from 1980 to 1999. In 1980, only 14 countries were scored as openness, while in 1999, 62 countries were open economies. The number of a country classified as open economy has increased by three times.
@@ -184,13 +187,11 @@ result_m_regime_3
 
 
 
-##Data and Measures
+##Variables and Measures
 
 
-**Independent Variables**  
+**Dedependent Variables**  
 *Tariff* is a country's average statutory tariff rate between 1980 and 1999. However, this is poorly measured with a large number of missing data in the data set. To be fair, it is notoriously difficult to measure and hard to find time-series and cross-sectional data on this measure.  
-
-*Openness*, is our second measure of trade liberalization with dichotomous classification of trade regimes into closed (=0) and open (=1) ones. This measure includes a broader domain than the average tariff rate: non-tariff trade barriers, average tariff rate, black market exchange rate, and general economic structure of a country. According to Kornai (1992), a country is coded as closed if any of the following is true: nontariff barriers cover 40 percent or more of trade; average tariff rates are 40 percent or more; the black market exchange rate depreciated by 20 percent or more relative to the official exchange rate during the 1970s or 1980s, and there was a state monopoly on exports. This measure of trade policy can be used for robustness check. 
 
 
 **Dependent Variable**
@@ -252,11 +253,10 @@ stargazer(mydata_2_des_noc, header = FALSE, iqr=T,
 ```
 
 
-#Section II: Empirical analysis: The OLS Model
+#Section II: Empirical analysis: The OLS Models
 
 
 Our central dependent variable is a country' trade policy in year *t*. We want to explain the changes of the extent of openness of the trade regime of the country on average. We use two ways of measuring trade policy. The first measure is a country's unweighted average statutory tariff rate (*TARIFF*). A decline of tariff rates indicates a more liberalized trade policy of a country. The mean of the statutory tariff rate is 21% between 1980 to 1999. However, it is poorly measured. This measurement may not be valid or reliable to capture the latent variables of the trade policy concept that I am interested in. In the periods of 1980s and 1990s, I still have 2683 missing values (14% of the total). I may end up drawing inaccurate inference due to the measurement problem.
-
 
 ```{r Checking missing values, results='asis', echo = FALSE, message=FALSE, include=F}
 
@@ -274,10 +274,81 @@ table(mydata2_3$Tariff, useNA="ifany") #The missing values: NA = 1780
 
 table(mydata2$Openness, useNA="ifany") #The missing values of openness: NA = 2580
 ```
+```{r prepare a lagged dataset mydata3, eval=T, echo=F, results="hide", warning=F} 
+mydata3 <- mydata[,c(2,3,14,7,31,11,41,28,49,13,21,34), drop=F]
+colnames(mydata3) <- c("Country","Year","Tariff","Openness","Regime(t-1)","Democracy(t-1)","Dictator(t-1)","Years of Office(t-1)",
+                       "GATT/WTO(t-1)","Economic Crisis(t-1)","GDP PC 95(t-1)","IMF(t-1)")
 
+save(mydata3,file="mydata3_fulldatasetlagged1year.rda")
+
+Regime_l1 <- mydata3[,"Regime(t-1)"]
+WTO_l1 <- mydata3[,"GATT/WTO(t-1)"]
+YO_l1 <- mydata3[,"Years of Office(t-1)"]
+EC_l1 <- mydata3[,"Economic Crisis(t-1)"]
+IMF_l1 <- mydata3[,"IMF(t-1)"]
+GDP_l1 <- mydata3[,"GDP PC 95(t-1)"]
+lnGDP_l1 <- log(mydata3[,"GDP PC 95(t-1)"])
+```
+
+```{r prepare a small dataset mydata4, eval=T, echo=F, results="hide", warning=F} 
+
+mydata4 <- mydata3
+Regime_l1 <- mydata3[,"Regime(t-1)"]
+
+## Recode this variable into 1= "democracy (polity score is 6 or more) or more" versus 0="non-democracy (polity score is 6 or less)'' category:
+mydata4 <- mutate(mydata3, Regime_l1_Bi = 1*(Regime_l1 >= 6))
+#Check the recoding
+with(mydata4, table(Regime_l1_Bi, Regime_l1,useNA="ifany"))
+#I turned Polity's Regime variable into a dichotomous variable with countries scoring below 6 as autocracies and those above 6 as democracies (=1).
+
+save(mydata4,file="mydata4.rda")
+
+row.has.na <- apply(mydata4, 1, function(x){any(is.na(x))})
+sum(row.has.na)
+
+mydata4_small <- mydata4[!row.has.na,]
+summary(mydata4_small)
+nrow(mydata4)#5370
+nrow(mydata4_small)#662
+
+save(mydata4_small,file="mydata4_NAremoved.rda")
+
+```
+
+```{r try collapsing data, results='hide', echo = FALSE, message = FALSE, warning=FALSE, include=F}
+
+#getwd()
+#list.files()
+load(file="C:/Users/Lucie Lu/Documents/531-explorations/Finalpaper/Data/mydata4_NAremoved.rda")
+
+
+mydata_5 <- mydata4_small %>%
+  group_by(Country) %>%
+  summarize(Tariff_c = mean(Tariff),
+            Regime_c = mean(`Regime(t-1)`),
+            YearOffice_c = mean(`Years of Office(t-1)`),
+            WTO_c = mean(`GATT/WTO(t-1)`),
+          EC_c = mean(`Economic Crisis(t-1)`),
+          GDP_c = mean(`GDP PC 95(t-1)`),
+          IMF_c = mean(`IMF(t-1)`))
+
+
+#the number of observations in each cluster
+mydata4_small %>%
+  group_by(Country) %>%
+  summarize(no_obs=n())
+
+mydata_5 <- mutate(mydata_5, Regime_Bi_c = 1*(Regime_c >= 6))
+
+
+save(mydata_5,file="mydata_5collapseyear.rda")
+
+```
 My central independent variable is the type of political regime in place in a country in year *t*. As noted, the Polity Score ranging from -10 to 10 captures the institutional differences between democracies and autocracies regarding the fairness and openness of political competition and the size of the electorate. The mean of *Regime (Polity Score)* is -1.1, which indicates on average over this period a majority of these developing countries have mixes of democratic and autocratic features. It is later converted as a dichotomous variable *Democracy* with countries scoring below 6 in the Polity Score as autocracies (=0) and those above 6 as democracies (=1).        
 
-The correlation coefficient itself is simply a way to describe how the two variables vary together. Here, I first look at the bivariate relationship between the average tariff rate and polity score. The correlation coefficient *r* is -0.12. From Table 2, we can see there are negative relationships between the dependent variable, the independent variable and the control variables (except WTO members). It is noted that the covariate coefficients between the dependent variable, independent variable and cofounders are low. This correlation matrix provide evidence of a low possibility of the multicollinearity issue in the later regression analysis.
+#Data Structure
+
+The correlation coefficient itself is simply a way to describe how the two variables vary together. Here, I first look at the bivariate relationship between the average tariff rate and polity score. The correlation coefficient *r* is -0.12. From Table 2, we can see there are negative relationships between the dependent variable, the independent variable and the control variables (except WTO members). It is noted that the covariate coefficients between the dependent variable, independent variable and cofounders are low. This correlation matrix provide evidence of a low possibility of the collinearity issues in the later regression analysis.
 
 
 ```{r bivariate relationship, out.width = '85%', eval = TRUE, echo = FALSE, results = "hide", message = FALSE, warning = FALSE}
@@ -306,9 +377,7 @@ YO <- mydata2[,"Years of Office"]
 
 matrix_cor <- data.frame(Tariff, Regime, lnGDP, EC, WTO, YO)
 #as.matrix(matrix_cor)
-```
 
-```{r bivariate relationship3, eval = TRUE, echo = FALSE, results = "hide", message = FALSE}
 rcor<-cor(matrix_cor,use="pairwise.complete.obs")
 for(i in 1:6){
   for(j in 1:6){
@@ -317,7 +386,7 @@ for(i in 1:6){
 round(rcor,2)
 ```
 
-```{r bivariate relationship print, eval = TRUE, echo = FALSE, results='hide', message = FALSE, warning = FALSE, include=FALSE}
+```{r xtable bivariate relationship, eval = TRUE, echo = FALSE, results='hide', message = FALSE, warning = FALSE, include=FALSE}
 
 #install.packages("xtable",repos = "http://cran.us.r-project.org")
 library(xtable)
@@ -327,33 +396,99 @@ TAB1<-round(rcor,2)
 xtable(TAB1)
 ```
 
-```{r bivariate relationship print2, results = "asis", message = FALSE, warning = FALSE}
+```{r print xtable bivariate relationship, eval = TRUE, echo = FALSE, results='asis', message = FALSE, warning = FALSE, include=FALSE}
+
 print(xtable::xtable(rcor, caption = "Correlation Matirx: Correlations among Variables and Confounders"),type = "latex",
       html.table.attributes="border=1")
 ```
 
 
-Following Achen (2005)'s Rule of Three, I have laid out the reasons to control for the three covariates: GDP per capita, economic crisis and WTO membership. The fourth one, "year of office"" is added for additional check. Only covariates that meet the condition of affecting both the treatment and outcome variables confound the observed relationship between the two (Rubin, 1997; Achen, 1982). I hope that through control of these relevant covariates, the treatment effect of democratization is less cofounded. I lag all of the independent variables by one year to some extent account for the endogeneity issue. The basic OLS equation estimating the relationship between democracy and trade policy is:  
+This figure tells me two important problems of the data structure in this dataset: 1) There are outliers in the data structure that we need to take them into account. Later on, I will use "lmrob" regression modelling strategy to handle unusual observations that do not follow the general trend of the data set. 2) Variations of tariffs and polity scores across countries and across years are merged. For a single point on the figure, I can get the values of x (polity score) and y (tariff rate) of that point. However, I do not know that particular point stands for which year or/and which country. Before I proceed, I will examine whether variation across countries for a given year (*country differences*) or variation across years within a given country (*year differences*)is higher.
+      
+```{r justify why I collapse data by years, results='hide', echo = FALSE, message = FALSE, warning=FALSE, include=F}
+mydata4_small$countryF<-factor(mydata4_small$Country) 
+
+countryMeans<-with(mydata4_small,tapply(Tariff,countryF,mean)) 
+countrydiff<-var(countryMeans)
+yeardiff<-mean(with(mydata4_small,tapply(Tariff,countryF,var)), na.rm = T)
+#This code gives the mean of within-country (grouped by countryF) variance
+
+#Across-country variance is around 1.7 times of the within-country-years variance. It means that differences across countries are higher than differences across years within each country.
+countrydiff #123.7
+yeardiff #70.71
+
+#Interclass correlation (Gilman & Hill, p. 258): the relative values of country- and year-level variances variances. In this case, the interclass correlation 0.63 suggests that differences acorss countries convey more information than differences across years within a country. 
+yeardiff/(countrydiff+yeardiff) #0.36
+countrydiff/(countrydiff+yeardiff) #0.63
+
+#install.packages("ICC")
+library(ICC)
+ICC_wc <- ICCbare(y=Tariff,x=countryF,data=mydata4_small) 
+ICC_wc #0.63
+
+# It is a method of Simple Estimation of the Intraclass Correlation Coefficient. The ICC score describes how strongly units in the same group resemble each other.
+# High intraclass correlation means values(y) from the same group tend to be similar. The variance within countries is quite high with ICC score 0.63. This suggests that within a country, a country's tariff levels have not changed much across years.
+
+```
+
+```{r  ggboxplot for cross country variations, eval = TRUE, echo = FALSE, results = "hide", message = FALSE}
+
+## to visualize variances accross countries
+
+plotCF <- ggplot(mydata4_small, aes(x=countryF, y=Tariff)) + geom_boxplot()  
+
+plotCF + theme_classic() +ggtitle("Tariff variations across countries") + theme(
+        plot.title = element_text(hjust = 0.5),
+        axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank()) + labs (X = "Country", y= "Tariff Rates (in percentage)")
+```
+
+```{r  ggboxplot for cross year variations, eval = TRUE, echo = FALSE, results = "hide", message = FALSE}
+## to visualize variances accross years
+
+Year.factor <- factor(mydata4_small$Year)
+plotyears <- ggplot(mydata4_small, aes(x=Year.factor, y=Tariff)) + geom_boxplot() 
+
+plotyears + 
+  theme_classic() +
+  ggtitle("Tariff variations across Years") + 
+  theme(plot.title = element_text(hjust = 0.5)) +
+ labs (X = "Year", y= "Tariff Rates (in percentage)")
+```
+
+I calculated across-country variance (*123.7*) and within-country-years varianceis (*70.71*). Across-country variance is around 1.7 times of the within-country-years variance. It means that differences across countries are higher than differences across years within each country. I also calculated an ICC score: It is a method of Simple Estimation of the Intraclass Correlation Coefficient. Interclass correlation is the relative values of country- and year-level variances variances (Gilman & Hill, p. 258). The variance within countries is quite high with ICC score *0.63*. In this case, the interclass correlation *0.63* suggests that differences acorss countries convey more information than differences across years within a country. This suggests that within a country, a country's tariff levels have not changed much across years. In contrast, tariffs variations across countries are high. The boxplots further demonstrate this point. 
+
+
+In the current dataset, the panel dataset includes yearly tariff data for 81 developing countries over 20-year period. Tariffs variations across countries are larger than vairations across years within a country. Therefore, later on, I collapse the data to 81 data points so I can know what the mean tariff rate (and other information) is for each country. Here, country is the grouping variable.
+
+```{r bivaraite relationship in dataset5, eval = TRUE, echo = FALSE, results = "axix", message = FALSE}
+
+plot (mydata_5$Regime_c, mydata_5$Tariff_c, col = "darkblue", pch = 20, xlab = "Regime Type (Polity Score)", ylab = "Tariff Rate (in percentage)",
+      main = "Bivariate Relationship bewtween \n Regime Type and Tariff Rate")
+
+plot_bi5 <- ggplot(mydata_5, aes(x= Regime_c, y = Tariff_c, label=countryF)) + geom_point() 
+
+### geom_label_repel
+
+plot_bi5 + 
+  geom_text_repel(data = filter(mydata_5, (Regime_c < -3 & Tariff_c >30) | (Regime_c > 6 & Tariff_c < 15) | Tariff_c > 40)) +
+  theme_classic() +
+  ggtitle("Bivariate Relationship bewtween \n Regime Type and Tariff Rate (with Country Labels)") + 
+  theme(plot.title = element_text(hjust = 0.5)) +
+  labs (x = "Regime Type (Polity Score)", 
+        y= "Tariff Rate (in percentage)")
+
+```
+#OLS Models
+According to Achen (2005)'s Rule of Three, I have laid out the reasons to control for the three covariates: GDP per capita, economic crisis and WTO membership. The fourth one, "year of office"" is added for additional check. Only covariates that meet the condition of affecting both the treatment and outcome variables confound the observed relationship between the two (Rubin, 1997; Achen, 1982). I hope that through control of these relevant covariates, the treatment effect of democratization is less cofounded. I lag all of the independent variables by one year to some extent account for the endogeneity issue. The basic OLS equation estimating the relationship between democracy and trade policy is:  
 
 $tradepolicy_{i,t} = \beta_0 + \beta_1*REGIME_{i,t-1} + \beta_2*GDPPC_{i,t-1} + \beta_3*ECCRISIS_{i,t-1} + \beta_4*WTO_{i,t-1} + \beta_5*OFFICE_{i,t-1} + \varepsilon_i$  
-
 
 Table 3 shows that on average more democratic regimes tend to have lower tariff rates. In almost all of the regressions, regime type is correctly signed, as expected. In equation (5), an expected 0.13 unit decrease in tariff rate (in percentage) for every one unit increase in democracy in Polity Score. Tariff rates expect to drop from about its mean at 20.8 percent to about 20.67 percent when the regime polity score increases by point 1. Moving from an absolute autocracy (-10) to a perfect democracy (10) induces 2.6 percent decline in tariffs.  
 
 ```{r myregression OLS1, results='asis', echo = FALSE, results = "hide", message=FALSE, warning=FALSE}
-mydata3 <- mydata[,c(2,3,14,7,31,11,41,28,49,13,21,34), drop=F]
-colnames(mydata3) <- c("Country","Year","Tariff","Openness","Regime(t-1)","Democracy(t-1)","Dictator(t-1)","Years of Office(t-1)",
-                       "GATT/WTO(t-1)","Economic Crisis(t-1)","GDP PC 95(t-1)","IMF(t-1)")
 
-save(mydata3,file="mydata3_fulldatasetlagged1year.rda")
-
-Regime_l1 <- mydata3[,"Regime(t-1)"]
-WTO_l1 <- mydata3[,"GATT/WTO(t-1)"]
-YO_l1 <- mydata3[,"Years of Office(t-1)"]
-EC_l1 <- mydata3[,"Economic Crisis(t-1)"]
-IMF_l1 <- mydata3[,"IMF(t-1)"]
-GDP_l1 <- mydata3[,"GDP PC 95(t-1)"]
-lnGDP_l1 <- log(mydata3[,"GDP PC 95(t-1)"])
 
 OLS_3_0 <- lm(Tariff ~ Regime_l1, data=mydata3)
 summary(OLS_3_0)$coefficient
@@ -481,9 +616,6 @@ summary(OLS_3_2B)$coefficient
 OLS_3_3B <- lm(Tariff ~ Regime_l1_Bi + log(GDP_l1) + WTO_l1, data=mydata4)
 summary(OLS_3_3B)$coefficient #the closest
 
-#OLS_3_4_0 <- lm(Tariff ~ Regime_l1 + GDP_l1 + WTO_l1 + IMF_l1, data=mydata3)
-#summary(OLS_3_4)
-
 OLS_3_4B <- lm(Tariff ~ Regime_l1_Bi + log(GDP_l1) + YO_l1, data=mydata4)
 summary(OLS_3_4B)$coefficient
 
@@ -494,27 +626,6 @@ summary(OLS_3_5B)$coefficient
 #The coefficient estimate summarizes the difference in average tariff rates between the democratic countries and non-democratic countries. Democratic countries will have 0.3% tariff rates lower on average than non-democratice countries. 
 ```
 
-```{r prepare a test small dataset, eval=T, echo=F, results="hide", warning=F} 
-
-mydata4 <- mydata3
-Regime_l1 <- mydata3[,"Regime(t-1)"]
-
-## Recode this variable into 1= "democracy (polity score is 6 or more) or more" versus 0="non-democracy (polity score is 6 or less)'' category:
-mydata4 <- mutate(mydata3, Regime_l1_Bi = 1*(Regime_l1 >= 6))
-#Check the recoding
-with(mydata4, table(Regime_l1_Bi, Regime_l1,useNA="ifany"))
-#I turned Polity's Regime variable into a dichotomous variable with countries scoring below 6 as autocracies and those above 6 as democracies (=1).
-
-save(mydata4,file="mydata4.rda")
-
-row.has.na <- apply(mydata4, 1, function(x){any(is.na(x))})
-sum(row.has.na)
-mydata4_small <- mydata4[!row.has.na,]
-summary(mydata4_small)
-nrow(mydata4)#5370
-nrow(mydata4_small)#662
-
-```
 
 ```{r try binary variables in small dataset, results='hide', echo = FALSE, message = FALSE, warning=FALSE, include=F}
 
@@ -549,22 +660,6 @@ summary(OLS_3_5Bs)$coefficient #0.58
 #Here, the sign for Regime_l1_Bi_s has flipped. Simpson's Paradox problem might exist: For example, if you have a categorical and continuous predictor then the continuous predictor could easily flip sign if the categorical one is added and within each category the sign is different than for the overall score. https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2266743/
 ```
 
-```{r find a better modelling strategy lmrob, results='hide', echo = FALSE, message = FALSE, warning=FALSE, include=F}
-
-require(MASS)
-require(robustbase)
-summary(OLS_3_5Bs)$coefficient ## lm model
-
-
-lmrob_5Bs <- lmrob(Tariff ~ Regime_l1_Bi_s + log(GDP_l1_s) + EC_l1_s + WTO_l1_s, data=mydata4_small, control = lmrob.control(max.it = 100))
-summary(lmrob_5Bs)$coefficient## lmrob model, all in correct signs
-
-#In regression modeling, lmrob is a robust statistics, which could be considered to handle unusual observations that do not follow the general trend of the data set. 'Robust' means that the tests have good power for a wide variety of distributions.
-
-#The lmrob output from the lmrob function provides 'Robustness weights' to give us information about the outliers in observations by evaluating their weight and summarize statistics from  the remaining observations.
-
-
-```
 
 #Let us try a different modelling strategy.
 
@@ -608,35 +703,6 @@ stargazer(lmrob_0Bs, lmrob_1Bs, lmrob_2Bs, lmrob_3Bs, lmrob_4Bs, lmrob_5Bs, head
 ```
 
 
-```{r try collapsing data, results='hide', echo = FALSE, message = FALSE, warning=FALSE, include=F}
-
-#getwd()
-#list.files()
-load(file="C:/Users/Lucie Lu/Documents/531-explorations/Finalpaper/Data/mydata4_NAremoved.rda")
-
-
-mydata_5 <- mydata4_small %>%
-  group_by(Country) %>%
-  summarize(Tariff_c = mean(Tariff),
-            Regime_c = mean(`Regime(t-1)`),
-            YearOffice_c = mean(`Years of Office(t-1)`),
-            WTO_c = mean(`GATT/WTO(t-1)`),
-          EC_c = mean(`Economic Crisis(t-1)`),
-          GDP_c = mean(`GDP PC 95(t-1)`),
-          IMF_c = mean(`IMF(t-1)`))
-
-
-#the number of observations in each cluster
-mydata4_small %>%
-  group_by(Country) %>%
-  summarize(no_obs=n())
-
-mydata_5 <- mutate(mydata_5, Regime_Bi_c = 1*(Regime_c >= 6))
-
-
-save(mydata_5,file="mydata_5collapseyear.rda")
-
-```
 
 ```{r OLS2 continus, results='hide', echo = FALSE, message = FALSE, warning=FALSE, include=F }
 
@@ -682,15 +748,8 @@ OLS_5_5Bs <- lm(Tariff_c ~ Regime_Bi_c + GDP_c + EC_c + WTO_c, data=mydata_5, na
 summary(OLS_5_5Bs)$coefficient # -1.992
 ```
 
-```{r}
 
-
-plot (mydata_5$Regime_c, mydata_5$Tariff_c, col = "darkblue", pch = 20, xlab = "Regime Type (Polity Score)", ylab = "Tariff Rate (in percentage)",
-      main = "Bivariate Relationship bewtween \n Regime Type and Tariff Rate")
-```
-
-
-```{r a better modelling strategy lmrob can put in table, results='hide', echo = FALSE, message = FALSE, warning=FALSE, include=F}
+```{r lmrob2, results='hide', echo = FALSE, message = FALSE, warning=FALSE, include=F}
 
 #3 observations are outliers
 lmrob_5_0Bs <- lmrob(Tariff_c ~ Regime_Bi_c, data=mydata_5, control = lmrob.control(max.it = 100))
@@ -714,35 +773,4 @@ summary(lmrob_5_5Bs)$coefficient #-3.5
 ```
 
 
-      
-```{r justify why I collapse data by years, results='hide', echo = FALSE, message = FALSE, warning=FALSE, include=F}
-mydata4_small$countryF<-factor(mydata4_small$Country) 
 
-countryMeans<-with(mydata4_small,tapply(Tariff,countryF,mean)) 
-acrosscountries<-var(countryMeans)
-withincountries<-mean(with(mydata4_small,tapply(Tariff,countryF,var)), na.rm = T)
-#This code gives the mean of within-country (grouped by countryF) variance
-
-#Across-country variance is around 1.7 times of the within-country-years variance. It means that differences across countries are higher than differences across years within each country.
-acrosscountries #123.7
-withincountries #70.71
-
-#Interclass correlation (Gilman & Hill, p. 258): the relative values of country- and year-level variances variances. In this case, the interclass correlation 0.63 suggests that differences acorss countries convey more information than differences across years within a country. 
-withincountries/(acrosscountries+withincountries) #0.36
-acrosscountries/(acrosscountries+withincountries) #0.63
-
-#install.packages("ICC")
-library(ICC)
-ICC_wc <- ICCbare(y=Tariff,x=countryF,data=mydata4_small) #0.63
-ICC_wc
-# It is a method of Simple Estimation of the Intraclass Correlation Coefficient. The ICC score describes how strongly units in the same group resemble each other.
-# High intraclass correlation means values(y) from the same group tend to be similar. The variance within countries is quite high with ICC score 0.63. This suggests that within a country, a country's tariff levels have not changed much across years.
-
-#install.packages("rmngb")
-library(rmngb)
-boxplot(mydata4_small$Tariff ~ mydata4_small$countryF)
-## to visualize variances accross countries
-
-boxplot(mydata4_small$Tariff ~ mydata4_small$Year)
-## to visualize variances accross years
-```
