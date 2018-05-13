@@ -1,0 +1,29 @@
+% Rscript -e "library(knitr); knit('day1.Rnw')"; latexmk -pdf day1.tex
+% search and replace keep.comment=FALSE to TRUE for commented version
+
+\documentclass[10pt,letterpaper]{article}
+
+\title{Class 1---Matching With Longitudinal Data}
+\author{Jake Bowers}
+
+\usepackage{icpsrclasswork}
+%\pagestyle{myfancy}
+
+\includeversion{comment}
+\markversion{comment}
+%\excludeversion{comment}
+
+\usepackage{Sweave}
+\begin{document}
+\input{unit15-Rex-concordance}
+
+\begin{Schunk}
+\begin{Sinput}
+> require(knitr)
+> opts_chunk$set(tidy=TRUE,echo=TRUE,results='markup',strip.white=all,fig.path='figs/fig',cache=FALSE,highlight=TRUE,width.cutoff=110,size='footnotesize',out.width='1.2\\textwidth',message=FALSE,comment=NA)
+\end{Sinput}
+\end{Schunk}
+
+\VerbatimFootnotes
+\maketitle
+
