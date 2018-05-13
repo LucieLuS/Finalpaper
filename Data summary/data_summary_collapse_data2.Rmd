@@ -53,8 +53,6 @@ opts_chunk$set(
   message=FALSE,
   comment=NA)
 
-
-knitr::opts_chunk$set(fig.width=12, fig.height=8, fig.path='Figs/', echo=FALSE, warning=FALSE, message=FALSE)
 ```
 
 
@@ -306,6 +304,7 @@ with(mydata4, table(Regime_l1_Bi, Regime_l1,useNA="ifany"))
 
 save(mydata4,file="mydata4.rda")
 
+###########
 row.has.na <- apply(mydata4, 1, function(x){any(is.na(x))})
 sum(row.has.na)
 
@@ -313,6 +312,12 @@ mydata4_small <- mydata4[!row.has.na,]
 summary(mydata4_small)
 nrow(mydata4)#5370
 nrow(mydata4_small)#662
+
+Regime_l1_Bi_s <- mydata4_small$Regime_l1_Bi
+GDP_l1_s <- mydata4_small$`GDP PC 95(t-1)`
+EC_l1_s <- mydata4_small$`Economic Crisis(t-1)`
+WTO_l1_s <- mydata4_small$`GATT/WTO(t-1)`
+YO_l1_s <- mydata4_small$`Years of Office(t-1)`
 
 save(mydata4_small,file="mydata4_NAremoved.rda")
 
@@ -354,7 +359,7 @@ My central independent variable is the type of political regime in place in a co
 The correlation coefficient itself is simply a way to describe how the two variables vary together. Here, I first look at the bivariate relationship between the average tariff rate and polity score. The correlation coefficient *r* is -0.12. From Table 2, we can see there are negative relationships between the dependent variable, the independent variable and the control variables (except WTO members). It is noted that the covariate coefficients between the dependent variable, independent variable and cofounders are low. This correlation matrix provide evidence of a low possibility of the collinearity issues in the later regression analysis.
 
 
-```{r bivariate relationship, out.width = '85%', eval = TRUE, echo = FALSE, results = "hide", message = FALSE, warning = FALSE}
+```{r bivariate relationship, eval = TRUE, echo = FALSE, results = "hide", message = FALSE, warning = FALSE}
 
 plot (mydata2$Regime, mydata2$Tariff, col = "darkblue", pch = 20, xlab = "Regime Type (Polity Score)", ylab = "Tariff Rate (in percentage)",
       main = "Bivariate Relationship bewtween \n Regime Type and Tariff Rate")
@@ -460,7 +465,7 @@ plotyears +
  labs (X = "Year", y= "Tariff Rates (in percentage)")
 ```
 
-I calculated across-country variance (`r countrydiff`) and within-country-years varianceis (`r yeardiff`). Across-country variance is around 1.7 times of the within-country-years variance. It means that differences across countries are higher than differences across years within each country. I also calculated an ICC score: It is a method of Simple Estimation of the Intraclass Correlation Coefficient. Interclass correlation is the relative values of country- and year-level variances variances (Gilman & Hill, p. 258). The variance within countries is quite high with ICC score `r ICC_wc`. In this case, the interclass correlation `ICC_wc` suggests that differences acorss countries convey more information than differences across years within a country. This suggests that within a country, a country's tariff levels have not changed much across years. In contrast, tariffs variations across countries are high. The boxplots further demonstrate this point. 
+I calculated across-country variance (`r countrydiff`) and within-country-years varianceis (`r yeardiff`). Across-country variance is around 1.7 times of the within-country-years variance. It means that differences across countries are higher than differences across years within each country. I also calculated an ICC score: It is a method of Simple Estimation of the Intraclass Correlation Coefficient. Interclass correlation is the relative values of country- and year-level variances variances (Gilman & Hill, p. 258). The variance within countries is quite high with ICC score `r ICC_wc`. In this case, the interclass correlation `r ICC_wc` suggests that differences acorss countries convey more information than differences across years within a country. This suggests that within a country, a country's tariff levels have not changed much across years. In contrast, tariffs variations across countries are high. The boxplots further demonstrate this point. 
 
 
 In the current dataset, the panel dataset includes yearly tariff data for 81 developing countries over 20-year period. Tariffs variations across countries are larger than vairations across years within a country. Therefore, later on, I collapse the data to 81 data points so I can know what the mean tariff rate (and other information) is for each country. Here, country is the grouping variable.
@@ -489,43 +494,74 @@ $tradepolicy_{i,t} = \beta_0 + \beta_1*REGIME_{i,t-1} + \beta_2*GDPPC_{i,t-1} + 
 
 Table 3 shows that on average more democratic regimes tend to have lower tariff rates. In almost all of the regressions, regime type is correctly signed, as expected. In equation (5), an expected 0.13 unit decrease in tariff rate (in percentage) for every one unit increase in democracy in Polity Score. Tariff rates expect to drop from about its mean at 20.8 percent to about 20.67 percent when the regime polity score increases by point 1. Moving from an absolute autocracy (-10) to a perfect democracy (10) induces 2.6 percent decline in tariffs.  
 
-```{r myregression OLS1, results='asis', echo = FALSE, results = "hide", message=FALSE, warning=FALSE}
 
+```{r OLS2 binary, results='hide', echo = FALSE, message = FALSE, warning=FALSE, include=F }
+#comparing democracy and non-democracy
+OLS_5_0Bs <- lm(Tariff_c ~ Regime_Bi_c, data=mydata_5)
+summary(OLS_5_0Bs)$coefficient #-4.287 
 
-OLS_3_0 <- lm(Tariff ~ Regime_l1, data=mydata3)
-summary(OLS_3_0)$coefficient
+OLS_5_1Bs <- lm(Tariff_c ~ Regime_Bi_c + GDP_c, data=mydata_5)
+summary(OLS_5_1Bs)$coefficient # -2.56 
 
-OLS_3_1 <- lm(Tariff ~ Regime_l1 + log(GDP_l1), data=mydata3)
-#OLS_3_1_2 <- lm(Tariff ~ Regime_l1 + lnGDP_l1, data=mydata3)
-#summary(OLS_3_1)
+OLS_5_2Bs <- lm(Tariff_c ~ Regime_Bi_c + GDP_c + EC_c, data=mydata_5)
+summary(OLS_5_2Bs)$coefficient #-2.7 
 
-OLS_3_2 <- lm(Tariff ~ Regime_l1 + log(GDP_l1) + EC_l1, data=mydata3)
-#summary(OLS_3_2)
+OLS_5_3Bs <- lm(Tariff_c ~ Regime_Bi_c + GDP_c + WTO_c, data=mydata_5)
+summary(OLS_5_3Bs)$coefficient #-2.67
 
-OLS_3_3 <- lm(Tariff ~ Regime_l1 + log(GDP_l1) + WTO_l1, data=mydata3)
-#summary(OLS_3_3) #the closest
+OLS_5_4Bs <- lm(Tariff_c ~ Regime_Bi_c + GDP_c + YearOffice_c, data=mydata_5)
+summary(OLS_5_4Bs)$coefficient #-2.96
 
-#OLS_3_4_0 <- lm(Tariff ~ Regime_l1 + GDP_l1 + WTO_l1 + IMF_l1, data=mydata3)
-#summary(OLS_3_4)
-
-OLS_3_4 <- lm(Tariff ~ Regime_l1 + log(GDP_l1) + YO_l1, data=mydata3)
-#summary(OLS_3_4)
-
-OLS_3_5_0 <- lm(Tariff ~ Regime_l1 + log(GDP_l1) + EC_l1 + WTO_l1, data=mydata3)
-coef(OLS_3_5_0)
-
-#OLS_3_5_2 <- lm(Tariff ~ Regime_l1 + log(GDP_l1) + EC_l1 + WTO_l1 + YO_l1, data=mydata3)
-#summary(OLS_3_5_2)
-
+OLS_5_5Bs <- lm(Tariff_c ~ Regime_Bi_c + GDP_c + EC_c + WTO_c, data=mydata_5, na.action = na.exclude)
+summary(OLS_5_5Bs)$coefficient # -2.84
 ```
 
 
-```{r myregression OLS1 Table, results='asis', echo = FALSE, message = FALSE, warning=FALSE}
+```{r myregression OLS2 Table, results='asis', echo = FALSE, message = FALSE, warning=FALSE}
 
 library(stargazer)
-stargazer(OLS_3_1, OLS_3_2, OLS_3_3, OLS_3_4, OLS_3_5_0, header = FALSE, df = FALSE,
+stargazer(OLS_5_0Bs, OLS_5_1Bs, OLS_5_2Bs, OLS_5_3Bs, OLS_5_4Bs, OLS_5_5Bs, header = FALSE, df = FALSE,
           title = "Multiple Linear Regression Model: Results",
-          covariate.labels = c("Regime (Polity Score)", "GDP per capita", "Economic Crisis", "GATT/WTO Member", "Years of Office"),
+          covariate.labels = c("Democracy", "GDP per capita", "Economic Crisis", "GATT/WTO Member", "Years of Office"),
+          dep.var.labels = "Tariff Rates", 
+          column.sep.width = "0.3pt", no.space = TRUE, font.size = "footnotesize")
+```
+
+
+In regression modeling, lmrob is a robust statistics, which could be considered to handle unusual observations that do not follow the general trend of the data set. 'Robust' means that the tests have good power for a wide variety of distributions. The lmrob output from the lmrob function provides 'Robustness weights' to give us information about the outliers in observations by evaluating their weight and summarize statistics from  the remaining observations.  
+
+
+```{r lmrob2, results='hide', echo = FALSE, message = FALSE, warning=FALSE, include=F}
+
+set.seed(2000814)
+
+#3 observations are outliers
+lmrob_5_0Bs <- lmrob(Tariff_c ~ Regime_Bi_c, data=mydata_5, control = lmrob.control(max.it = 100))
+summary(lmrob_5_0Bs)$coefficient #-4.58
+
+lmrob_5_1Bs <- lmrob(Tariff_c ~ Regime_Bi_c + GDP_c, data=mydata_5, control = lmrob.control(max.it = 100))
+summary(lmrob_5_1Bs)$coefficient #-3.18
+
+lmrob_5_2Bs <- lmrob(Tariff_c ~ Regime_Bi_c + GDP_c + EC_c, data=mydata_5, control = lmrob.control(max.it = 100))
+summary(lmrob_5_2Bs)$coefficient #-3.27
+
+lmrob_5_3Bs <- lmrob(Tariff_c ~ Regime_Bi_c + GDP_c + WTO_c, data=mydata_5, control = lmrob.control(max.it = 100))
+summary(lmrob_5_3Bs)$coefficient #-3.20
+
+lmrob_5_4Bs <- lmrob(Tariff_c ~ Regime_Bi_c + GDP_c + YearOffice_c, data=mydata_5, control = lmrob.control(max.it = 100))
+summary(lmrob_5_4Bs)$coefficient #-2.50
+
+lmrob_5_5Bs <- lmrob(Tariff_c ~ Regime_Bi_c + GDP_c + EC_c + WTO_c, data=mydata_5, control = lmrob.control(max.it = 100))
+summary(lmrob_5_5Bs)$coefficient #-3.3
+
+```
+
+```{r myregression lmrob Table 2, results='asis', echo = FALSE, message = FALSE, warning=FALSE}
+
+library(stargazer)
+stargazer(lmrob_5_0Bs, lmrob_5_1Bs, lmrob_5_2Bs, lmrob_5_3Bs, lmrob_5_4Bs, lmrob_5_5Bs, header = FALSE, df = FALSE,
+          title = "Multiple Linear Regression Model (LMROBUST): Results",
+          covariate.labels = c("Democracy", "GDP per capita", "Economic Crisis", "GATT/WTO Member", "Years of Office"),
           dep.var.labels = "Tariff Rates", 
           column.sep.width = "0.3pt", no.space = TRUE, font.size = "footnotesize")
 ```
@@ -589,7 +625,7 @@ abline(lm(I(OLS_3_1x1x2res) ~ I(OLS_3_1yx2res)), lwd = 2)
 ##Comments: There are residual variabilities left after removing x2 (GDP_l1).
 ```
 
-I am also concerned about the partial relationship between tariff rate and democracy score. I am interested in seeing what percent of the variation in the full multiple regression model (Model 4 in Table 3) cannot be explained by the independent variable but can be explained by the rest of the confounders.
+I am concerned about the partial relationship between tariff rate and democracy score. I am interested in seeing what percent of the variation in the full multiple regression model (Model 4 in Table 3) cannot be explained by the independent variable but can be explained by the rest of the confounders.
 
 ```{r model evaluation work on it later, results='hide', echo = FALSE, message = FALSE, warning=FALSE, include=F}
 
@@ -602,177 +638,13 @@ OLS_3_5_0 <- lm(Tariff ~ Regime_l1 + log(GDP_l1) + EC_l1 + WTO_l1, data=mydata3,
 #warning: the sizes of the dataset are not the same. Need to fix it.
 ```
 
-```{r summary of coefficients in binary variables, results='hide', echo = FALSE, message = FALSE, warning=FALSE, include=F}
-mydata4 <- mutate(mydata3, Regime_l1_Bi = 1*(Regime_l1 >= 6))
-
-
-OLS_3_0B <- lm(Tariff ~ Regime_l1_Bi, data=mydata4)
-summary(OLS_3_0B)$coefficient
-
-OLS_3_1B <- lm(Tariff ~ Regime_l1_Bi + log(GDP_l1), data=mydata4)
-summary(OLS_3_1B)$coefficient
-
-OLS_3_2B <- lm(Tariff ~ Regime_l1_Bi + log(GDP_l1) + EC_l1, data=mydata4)
-summary(OLS_3_2B)$coefficient
-
-OLS_3_3B <- lm(Tariff ~ Regime_l1_Bi + log(GDP_l1) + WTO_l1, data=mydata4)
-summary(OLS_3_3B)$coefficient #the closest
-
-OLS_3_4B <- lm(Tariff ~ Regime_l1_Bi + log(GDP_l1) + YO_l1, data=mydata4)
-summary(OLS_3_4B)$coefficient
-
-
-OLS_3_5B <- lm(Tariff ~ Regime_l1_Bi + log(GDP_l1) + EC_l1 + WTO_l1, data=mydata4, na.action = na.exclude)
-summary(OLS_3_5B)$coefficient
-
-#The coefficient estimate summarizes the difference in average tariff rates between the democratic countries and non-democratic countries. Democratic countries will have 0.3% tariff rates lower on average than non-democratice countries. 
-```
-
-
-```{r try binary variables in small dataset, results='hide', echo = FALSE, message = FALSE, warning=FALSE, include=F}
-
-Regime_l1_Bi_s <- mydata4_small$Regime_l1_Bi
-GDP_l1_s <- mydata4_small$`GDP PC 95(t-1)`
-EC_l1_s <- mydata4_small$`Economic Crisis(t-1)`
-WTO_l1_s <- mydata4_small$`GATT/WTO(t-1)`
-YO_l1_s <- mydata4_small$`Years of Office(t-1)`
-
-OLS_3_0Bs <- lm(Tariff ~ Regime_l1_Bi_s, data=mydata4_small)
-summary(OLS_3_0Bs)$coefficient #-3.054
-
-OLS_3_1Bs <- lm(Tariff ~ Regime_l1_Bi_s + log(GDP_l1_s), data=mydata4_small)
-summary(OLS_3_1Bs)$coefficient #0.09
-
-OLS_3_2Bs <- lm(Tariff ~ Regime_l1_Bi_s + log(GDP_l1_s) + EC_l1_s, data=mydata4_small)
-summary(OLS_3_2Bs)$coefficient #0.81
-
-OLS_3_3Bs <- lm(Tariff ~ Regime_l1_Bi_s + log(GDP_l1_s) + WTO_l1_s, data=mydata4_small)
-summary(OLS_3_3Bs)$coefficient #-0.12
-
-#OLS_3_4_0 <- lm(Tariff ~ Regime_l1 + GDP_l1 + WTO_l1 + IMF_l1, data=mydata3)
-#summary(OLS_3_4)
-
-OLS_3_4Bs <- lm(Tariff ~ Regime_l1_Bi_s + log(GDP_l1_s) + YO_l1_s, data=mydata4_small)
-summary(OLS_3_4Bs)$coefficient #-1.37
-
-
-OLS_3_5Bs <- lm(Tariff ~ Regime_l1_Bi_s + log(GDP_l1_s) + EC_l1_s + WTO_l1_s, data=mydata4_small, na.action = na.exclude)
-summary(OLS_3_5Bs)$coefficient #0.58
-
-#Here, the sign for Regime_l1_Bi_s has flipped. Simpson's Paradox problem might exist: For example, if you have a categorical and continuous predictor then the continuous predictor could easily flip sign if the categorical one is added and within each category the sign is different than for the overall score. https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2266743/
-```
-
-
-#Let us try a different modelling strategy.
-
-In regression modeling, lmrob is a robust statistics, which could be considered to handle unusual observations that do not follow the general trend of the data set. 'Robust' means that the tests have good power for a wide variety of distributions. The lmrob output from the lmrob function provides 'Robustness weights' to give us information about the outliers in observations by evaluating their weight and summarize statistics from the remaining observations.
-
-Here, the coefficient sign for Democracy has flipped. Simpson's Paradox problem might exist: For example, if you have a categorical and continuous predictor then the continuous predictor could easily flip sign if the categorical one is added and within each category the sign is different than for the overall score. (https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2266743/)
-
-#may need to fix it later
-
-
-```{r a better modelling strategy lmrob can put in table, results='hide', echo = FALSE, message = FALSE, warning=FALSE, include=F}
-
-lmrob_0Bs <- lmrob(Tariff ~ Regime_l1_Bi_s, data=mydata4_small, control = lmrob.control(max.it = 100))
-summary(lmrob_0Bs)$coefficient #-4.57
-
-lmrob_1Bs <- lm(Tariff ~ Regime_l1_Bi_s + log(GDP_l1_s), data=mydata4_small, control = lmrob.control(max.it = 100))
-summary(lmrob_1Bs)$coefficient #0.09
-
-lmrob_2Bs <- lm(Tariff ~ Regime_l1_Bi_s + log(GDP_l1_s) + EC_l1_s, data=mydata4_small, control = lmrob.control(max.it = 100))
-summary(lmrob_2Bs)$coefficient #0.81
-
-lmrob_3Bs <- lm(Tariff ~ Regime_l1_Bi_s + log(GDP_l1_s) + WTO_l1_s, data=mydata4_small, control = lmrob.control(max.it = 100))
-summary(lmrob_3Bs)$coefficient #-0.11
-
-lmrob_4Bs <- lm(Tariff ~ Regime_l1_Bi_s + log(GDP_l1_s) + YO_l1_s, data=mydata4_small, control = lmrob.control(max.it = 100))
-summary(lmrob_4Bs)$coefficient #-1.37
-
-lmrob_5Bs <- lmrob(Tariff ~ Regime_l1_Bi_s + log(GDP_l1_s) + EC_l1_s + WTO_l1_s, data=mydata4_small, control = lmrob.control(max.it = 100))
-summary(lmrob_5Bs)$coefficient #-1.37
-
-```
-
-```{r myregression lmrob Table 2, results='asis', echo = FALSE, message = FALSE, warning=FALSE}
-
-library(stargazer)
-stargazer(lmrob_0Bs, lmrob_1Bs, lmrob_2Bs, lmrob_3Bs, lmrob_4Bs, lmrob_5Bs, header = FALSE, df = FALSE,
-          title = "Multiple Linear Regression Model: Results",
-          covariate.labels = c("Democracy", "GDP per capita", "Economic Crisis", "GATT/WTO Member", "Years of Office"),
-          dep.var.labels = "Tariff Rates", 
-          column.sep.width = "0.3pt", no.space = TRUE, font.size = "footnotesize")
-```
 
 
 
-```{r OLS2 continus, results='hide', echo = FALSE, message = FALSE, warning=FALSE, include=F }
-
-OLS_5_0 <- lm(Tariff_c ~ Regime_c, data=mydata_5)
-summary(OLS_5_0)$coefficient #-0.2992 as expected
-
-OLS_5_1 <- lm(Tariff_c ~ Regime_c + log(GDP_c), data=mydata_5)
-summary(OLS_5_1)$coefficient # -0.07
-
-OLS_5_2 <- lm(Tariff_c ~ Regime_c + log(GDP_c) + EC_c, data=mydata_5)
-summary(OLS_5_2)$coefficient #-0.03 
-
-OLS_5_3 <- lm(Tariff_c ~ Regime_c + log(GDP_c) + WTO_c, data=mydata_5)
-summary(OLS_5_3)$coefficient #-0.1
-
-OLS_5_4 <- lm(Tariff_c ~ Regime_c + log(GDP_c) + YearOffice_c, data=mydata_5)
-summary(OLS_5_4)$coefficient #-0.01
-
-OLS_5_5 <- lm(Tariff_c ~ Regime_c + log(GDP_c) + EC_c + WTO_c, data=mydata_5, na.action = na.exclude)
-summary(OLS_5_5)$coefficient # -0.07
-
-```
 
 
-```{r OLS2 binary, results='hide', echo = FALSE, message = FALSE, warning=FALSE, include=F }
-#comparing democracy and non-democracy
-OLS_5_0Bs <- lm(Tariff_c ~ Regime_Bi_c, data=mydata_5)
-summary(OLS_5_0Bs)$coefficient #-4.287 
-
-OLS_5_1Bs <- lm(Tariff_c ~ Regime_Bi_c + GDP_c, data=mydata_5)
-summary(OLS_5_1Bs)$coefficient # -1.748 
-
-OLS_5_2Bs <- lm(Tariff_c ~ Regime_Bi_c + GDP_c + EC_c, data=mydata_5)
-summary(OLS_5_2Bs)$coefficient #-1.832 
-
-OLS_5_3Bs <- lm(Tariff_c ~ Regime_Bi_c + GDP_c + WTO_c, data=mydata_5)
-summary(OLS_5_3Bs)$coefficient #-1.882
-
-OLS_5_4Bs <- lm(Tariff_c ~ Regime_Bi_c + GDP_c + YearOffice_c, data=mydata_5)
-summary(OLS_5_4Bs)$coefficient #-2.00314
-
-OLS_5_5Bs <- lm(Tariff_c ~ Regime_Bi_c + GDP_c + EC_c + WTO_c, data=mydata_5, na.action = na.exclude)
-summary(OLS_5_5Bs)$coefficient # -1.992
-```
 
 
-```{r lmrob2, results='hide', echo = FALSE, message = FALSE, warning=FALSE, include=F}
-
-#3 observations are outliers
-lmrob_5_0Bs <- lmrob(Tariff_c ~ Regime_Bi_c, data=mydata_5, control = lmrob.control(max.it = 100))
-summary(lmrob_5_0Bs)$coefficient #-4.58
-
-lmrob_5_1Bs <- lmrob(Tariff_c ~ Regime_Bi_c + GDP_c, data=mydata_5, control = lmrob.control(max.it = 100))
-summary(lmrob_5_1Bs)$coefficient #-3.43
-
-lmrob_5_2Bs <- lmrob(Tariff_c ~ Regime_Bi_c + GDP_c + EC_c, data=mydata_5, control = lmrob.control(max.it = 100))
-summary(lmrob_5_2Bs)$coefficient #-3.48
-
-lmrob_5_3Bs <- lmrob(Tariff_c ~ Regime_Bi_c + GDP_c + WTO_c, data=mydata_5, control = lmrob.control(max.it = 100))
-summary(lmrob_5_3Bs)$coefficient #-3.44
-
-lmrob_5_4Bs <- lmrob(Tariff_c ~ Regime_Bi_c + GDP_c + YearOffice_c, data=mydata_5, control = lmrob.control(max.it = 100))
-summary(lmrob_5_4Bs)$coefficient #-2.66
-
-lmrob_5_5Bs <- lmrob(Tariff_c ~ Regime_Bi_c + GDP_c + EC_c + WTO_c, data=mydata_5, control = lmrob.control(max.it = 100))
-summary(lmrob_5_5Bs)$coefficient #-3.5
-
-```
 
 
 
