@@ -389,7 +389,7 @@ bars<-20
 
 op <- par(mar = c(5,7,4,4)) #change white-space around graph
 hist(results_lm5Bs, breaks=20, xlab="P-values", ylab="number of p-values\n", axes=T,
-     main=paste("P-value Distribution under Null Effect in the Simulation in lm Canned Function"),
+     main=paste("P-value Distribution under Null Effect in 1000-times Simulation"),
      col="grey", xlim=c(0,1),  ylim=c(0, nSims))
 axis(side=1, at=seq(0,1, 0.1))
 abline(h=nSims/bars, col = "red", lty=3)
@@ -623,10 +623,10 @@ ggplot(data=stacked, aes(x=effectsize, y=power, colour=variable))+
 geom_line()+
 geom_hline(yintercept=0.8, linetype="dashed", color="black")+
   labs(title="Power and Effect Size in Simulations", x="Effect Size", y = "Power") +
-  theme_classic()
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5)) 
 
 ```
-*Power analysis of two models*:
 
 We can use simulations to estimate the statistical power of a model. The statistical power is the probability of observing a statistically significant result, if there is a true effect. When there is an effect, I hope that my statistical test is able to detect it. This denotes to high power in my study.   
 
