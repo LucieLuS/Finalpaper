@@ -82,6 +82,7 @@ library("gramr")
 
 library(xtable)
 
+
 ```
 
 
@@ -591,6 +592,8 @@ coeftest(OLS_5_0Bs,vcovWBC_m5_c) # Wild Bootstrap with Clustering by country
 ```
 
 ```{r prepare tables, eval=T, echo=F, results="hide", warning=F}
+
+
 #When considering clustering
 
 
@@ -637,9 +640,208 @@ The clustered versions of standard errors from different methods are also very c
 
 ##Confidence Interval
 
-```{r}
+```{r CI in OLS5_OBS, eval=T, echo=F, results="hide", warning=F}
+#try clustered function by country
 
+#SE_c_func
 coefci(OLS_5_0Bs, parm = NULL, level = 0.95, vcov. = vcov_cm5_c, 
        df = (nrow(mydata_5test)-length(b_m5)))
+
+#try clustered HC1
+#SE_c_hc1
+ coefci(OLS_5_0Bs, parm = NULL, level = 0.95, vcov. = vcov_hc1_cm5, 
+       df = (nrow(mydata_5test)-length(b_m5)))
+
+#They are the same
+```
+
+
+```{r CI in OLS5_5BS, eval=T, echo=F, results="hide", warning=F}
+
+## Produce White HC1 VCOV confidence interval the hard way
+vcov_hc1_cm5_5Bs <- cluster.vcov(OLS_5_5Bs, 1:nrow(mydata_5test), df_correction = TRUE)
+coeftest(OLS_5_5Bs, vcov_hc1_cm5_5Bs)
+
+ci_hc1_cm5_5Bs <- coefci(OLS_5_5Bs, parm = NULL, level = 0.95, vcov. = vcov_hc1_cm5_5Bs, 
+       df = (nrow(mydata_5test)-length(b_m5)))
+
+
+#CI with Clustering Function
+coeftest(OLS_5_5Bs, vcov_5_5Bs)
+
+ci_func_cm5_5Bs <- coefci(OLS_5_5Bs, parm = NULL, level = 0.95, vcov. = vcov_5_5Bs, 
+       df = (nrow(mydata_5test)-length(b_m5)))
+
+```
+
+
+```{r bootstrap, and simulations , eval=F, echo=F, results="hide", warning=F}
+
+OLS_5_5Bs <- lm(Tariff_c ~ Regime_Bi_c + GDP_c + EC_c + WTO_c, data=mydata_5)
+#summary(OLS_5_5Bs)$coefficient[2]
+
+
+#nsamps<-1000
+#sampfits<-data.frame(t(replicate(nsamps,coef(lm(milworry~age3,data=sample_n(chile90[,c("age3","milworry")],size=100,replace=FALSE))))))
+
+#quantile(sampfits[,"age355ymas"],c(.025,.975))
+
+library(dplyr)
+set.seed (20892380)
+
+beta.obs.boot <- numeric (10000)
+
+#origin.fit <- fitted(origin)
+#origin.resid <- resid(origin)
+for (i in 1: 10000){
+  this.ind <- sample (81, 81, replace = T)
+  beta.obs.boot[i] <- coef(lm(mydata_5$Tariff_c[this.ind] ~ mydata_5$Regime_Bi_c [this.ind] + mydata_5$GDP_c[this.ind] + mydata_5$EC_c[this.ind] + mydata_5$WTO_c[this.ind]))[2]
+}
+
+plot(density(beta.obs.boot), lwd=3, col = "steelblue")
+#v=as.numeric(coef(OLS_3_5Bs)[2])
+abline(v=as.numeric(coef(OLS_5_5Bs)[2]), lwd=3, col= "gold")
+
+#bootstrap quantile interval
+quantile(beta.obs.boot,c(.025,.975))
+CI_lm_m1 <- round(quantile(beta.obs.boot,c(.025,.975)), 2)
+CI_lm_m1
+```
+
+
+```{r confidence interval}
+set.seed (20892380)
+nsamps<-10000
+resample_original<-data.frame(t
+                              (replicate(nsamps,
+      coef(lm(Tariff_c ~ Regime_Bi_c + mydata_5$GDP_c + mydata_5$EC_c + mydata_5$WTO_c,
+              data=sample_n(mydata_5[,c("Regime_Bi_c","Tariff_c")],size=81,replace=T))))))
+
+  plot(density(resample_original$Regime_Bi_c), main = "Distribution of the test statistic using bootstrap approach")
+  abline(v=as.numeric(coef(OLS_5_5Bs)[2]), lwd=3, col= "gold")
+  
+  quantile(resample_original[,"Regime_Bi_c"],c(.025,.975))
+  round( quantile(resample_original[,"Regime_Bi_c"],c(.025,.975)),2)
+  #Confidence interval [-9.13, 1.28]
+  
+  
+```
+
+```{r check coverage rate of confidence interval}
+for (j in 1:1000)
+{
+nsamps<-1000
+resample_original<-data.frame(t
+                              (replicate(nsamps,
+      coef(lm(Tariff_c ~ Regime_Bi_c + mydata_5$GDP_c + mydata_5$EC_c + mydata_5$WTO_c,
+              data=sample_n(mydata_5[,c("Regime_Bi_c","Tariff_c")],size=81,replace=T))))))
+
+  #plot(density(resample_original$Regime_Bi_c), main = "Distribution of the test statistic using bootstrap approach")
+  #abline(v=as.numeric(coef(OLS_5_5Bs)[2]), lwd=3, col= "gold")
+  
+  M_t <- sort(resample_original[,"Regime_Bi_c"])
+  C = c(M_t[25],M_t[975])
+  if  ( (C[1] < 0) & (C[2] > 0) ) { nc = nc+1 }
+}
+
+CP[j] = nc/nrep
+  
+  #quantile(resample_original[,"Regime_Bi_c"],c(.025,.975))
+  #round( quantile(resample_original[,"Regime_Bi_c"],c(.025,.975)),2)
+  #Confidence interval [-9.13, 1.28]
+  
+  
+```
+
+
+```{r coverage interval}
+
+set.seed (20892380)
+nsamps<-10000
+resample_original<-data.frame(t
+                              (replicate(nsamps,
+      coef(lm(Tariff_c ~ Regime_Bi_c + mydata_5$GDP_c + mydata_5$EC_c + mydata_5$WTO_c,
+              data=sample_n(mydata_5[,c("Regime_Bi_c","Tariff_c")],size=81,replace=F))))))
+
+  plot(density(resample_original$Regime_Bi_c), main = "Distribution of the test statistic using bootstrap approach")
+  abline(v=as.numeric(coef(OLS_5_5Bs)[2]), lwd=3, col= "gold")
+  
+  quantile(resample_original[,"Regime_Bi_c"],c(.025,.975))
+  #coverage interval 
+   round(quantile(resample_original[,"Regime_Bi_c"],c(.025,.975)),2)
+```
+
+
+```{r Check performance of standard error coverage probabilities for standard OLS}
+
+
+CP <- NULL
+for (j in 1:100)
+{
+resample_original<-data.frame(t
+                              (replicate(1000,
+      coef(lm(Tariff_c ~ Regime_Bi_c + mydata_5$GDP_c + mydata_5$EC_c + mydata_5$WTO_c,
+              data=sample_n(mydata_5[,c("Regime_Bi_c","Tariff_c")],size=81,replace=F))))))
+
+
+## Coverage probabilities.
+n  <- 81
+SE <- SEOLS_m5[1]
+## Simulate a data set.
+X <- resample_original
+## Construct the CI.
+M <- X[,2]
+C <- 1.96*SE/sqrt(n)
+truth <- mean(M)
+## Check for coverage.
+ci <- ( (M - C <= truth) & (M + C >= truth)) 
+# so that it is
+#ci <- (M-C)<=0 # if the coefficient is positive
+#ci <- (M+C)>=0 # if the coefficient is negative
+# Then do
+mean(ci)
+CP[j] <- mean(ci)
+}
+
+covprob <- mean(CP)
+
+```
+
+```{r one last time Check performance of standard error coverage probabilities for standard OLS, eval=F}
+
+
+CP <- NULL
+
+for (j in 1:10){
+resample_original<-data.frame(t
+                              (replicate(1000,
+      coef(lm(Tariff_c ~ Regime_Bi_c + mydata_5$GDP_c + mydata_5$EC_c + mydata_5$WTO_c,
+              data=sample_n(mydata_5[,c("Regime_Bi_c","Tariff_c")],size=81,replace=F))))))
+
+replicate(j,resample_original[,2])
+
+## Coverage probabilities.
+n  <- 81
+SE <- SEOLS_m5[1]
+## Simulate a data set.
+X <- resample_original[,2]
+
+## Construct the CI.
+M <- apply(X,2,mean)
+C <- 1.96*SE/sqrt(n)
+
+## Check for coverage.
+ci <- ( (M - C <= 0) & (M + C >= 0)) 
+ci
+# so that it is
+#ci <- (M-C)<=0 # if the coefficient is positive
+#ci <- (M+C)>=0 # if the coefficient is negative
+# Then do
+mean(ci)
+CP[j] <- mean(ci)
+}
+
+CP
+
 
 ```
