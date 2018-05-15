@@ -1212,6 +1212,7 @@ printCIres1lmrob
 
 #CI here is [0,3].
 ```
+
 ```{r create Xtable to collect p-values and confidence interval}
 
 
@@ -1486,7 +1487,6 @@ ggplot(data=NULL, aes(OLS_4_0$fitted.values, OLS_4_0$residuals^2))+
 ```
 
 
-
 ```{r produce HC0, HC1, HC2, HC3, eval=T, echo=F, results="hide", warning=F} 
 
 OLS_4_0 <- lm(Tariff~Regime_l1_m4, data=mydata4_small)
@@ -1552,7 +1552,7 @@ dimnames(thesigmaHC3_m4)<-list(names(ehat_m4),names(ehat_m4))
 vcovHC3_m4 <- (solve(crossprod(X_m4)) %*% t(X_m4)) %*% (thesigmaHC3_m4) %*% ( X_m4 %*% solve(crossprod(X_m4)))
 
 #car::hccm(OLS_4_0,type="hc3")
-#These are also called ¡°White-corrected¡± or ¡°White-Huber¡± covariance matrices.
+#These are also called ??White-corrected?? or ??White-Huber?? covariance matrices.
 
 sebHC3_m4 <- sqrt(diag(vcovHC3_m4))
 sandsebHC3_m4 <- sqrt(diag(vcovHC(OLS_4_0, type = "HC3")))
@@ -1780,8 +1780,13 @@ pFtest(fixed.time, fixed.plm)
 
 ```
 
+
 ```{r, results='asis', echo=FALSE}
 cat("\\newpage")
+```
+
+```{r appendix, ref.label=knitr::all_labels(),echo=TRUE,eval=FALSE}
+
 ```
 
 #Citation

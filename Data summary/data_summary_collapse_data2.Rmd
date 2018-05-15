@@ -528,8 +528,7 @@ stargazer(OLS_5_0Bs, OLS_5_1Bs, OLS_5_2Bs, OLS_5_3Bs, OLS_5_4Bs, OLS_5_5Bs, head
 ```
 
 
-In regression modeling, lmrob is a robust statistics, which could be considered to handle unusual observations that do not follow the general trend of the data set. 'Robust' means that the tests have good power for a wide variety of distributions. The lmrob output from the lmrob function provides 'Robustness weights' to give us information about the outliers in observations by evaluating their weight and summarize statistics from  the remaining observations.  
-
+In regression modeling, lmrob is a robust statistics, which could be considered to handle unusual observations and outliers that do not follow the general trend of the data set. 'Robust' means that the tests have good power for a wide variety of distributions even if some of the assumptions used to justify the estimation method are not applicable. The *lmrob* output from the *lmrob* function provides 'robustness weights' to give us information about the outliers in the observations by evaluating their weights and summarize statistics from the remaining observations. It uses a fitting criterion that is not as vulnearble as least squares to unusual data (reference: http://users.stat.umn.edu/~sandy/courses/8053/handouts/robust.pdf). The estimators in the *lmrob* robust regression are weighted-least-squares estimates.
 
 ```{r lmrob2, results='hide', echo = FALSE, message = FALSE, warning=FALSE, include=F}
 

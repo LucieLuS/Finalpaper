@@ -1,0 +1,268 @@
+---
+title: "Statistical Inferences II (Confidence Interval)"
+author: "Lucie Lu"
+date: "May 13, 2018"
+output: pdf_document
+---
+
+```{r global_options, include=FALSE, cache=FALSE}
+## To make the pdf file do
+## render("exploration4.Rmd",output_format=pdf_document())
+
+require(knitr)
+opts_chunk$set(
+  tidy=FALSE,     # display code as typed
+  size="small",    # slightly smaller font for code
+  echo=TRUE,
+  results='markup',
+  strip.white=TRUE,
+  fig.path='figs/fig',
+  cache=FALSE,
+  highlight=TRUE,
+  width.cutoff=132,
+  size='footnotesize',
+  out.width='.9\\textwidth',
+  message=FALSE,
+  comment=NA)
+
+```
+
+
+```{r initialize,echo=FALSE, message=FALSE, warning=FALSE}
+##First, just setup the R environment for today:
+if(!file.exists('figs')) dir.create('figs')
+
+options(SweaveHooks=list(fig=function(){
+			   par(mar=c(3.5, 3, 1.1, 0),
+			       pty="s",
+			       mgp=c(1.5,0.5,0),
+			       oma=c(0,0,0,0))},
+			 echo=function(){options(continue=" ") ##Don't show "+" prompts,
+			 options(prompt=" ")
+			 }),
+	digits=4,
+	scipen=8,
+	width=132
+	)
+options(error=function(){options(prompt="> ",continue="+ ");NULL})
+
+
+#To prepare the environment
+library(readstata13)
+library(dplyr)
+library(ggplot2)
+#install.packages("ggrepel")
+library(ggrepel)
+library(stargazer)
+
+#install.packages("devtools")
+library(devtools)
+
+library(foreign)
+#install.packages("gplots")
+library(gplots)
+
+library(lmtest)
+library(sandwich)
+
+library(tidyverse)
+
+library(MASS)
+library(robustbase)
+
+#install.packages("rmngb")
+library(rmngb)
+library(here)
+
+#devtools::install_github("ropenscilabs/gramr")
+library("gramr")
+#write_good_ip()
+```
+
+
+```{r set up the data, echo=FALSE, message=FALSE, warning=FALSE, include=F}
+getwd()
+set_here(path=".", verbose=T)
+here()
+
+list.files(path=".")
+load("mydata_5collapseyear.rda")
+```
+
+##Checking unbiasedness and consistency of the estimates in the OLS model
+```{r check OLS estimates unbiasedness, results='hide', eval = TRUE, echo = FALSE, message = FALSE, warning=FALSE, include=F}
+
+OLS_5_0Bs <- lm(Tariff_c ~ Regime_Bi_c, data=mydata_5)
+summary(OLS_5_0Bs)$coefficient[2,1] #-4.29
+
+OLS_5_5Bs <- lm(Tariff_c ~ Regime_Bi_c + GDP_c + EC_c + WTO_c, data=mydata_5)
+summary(OLS_5_5Bs)$coefficient[2,1] #-2.84
+
+############
+
+
+#z is the experiment, shuffle the mydata4$Regime_l1_Bi variable to create a pretend experiment
+
+set.seed(2018)
+
+mydata_5test <- mydata_5
+
+#rm(mydata_5test$a)
+#mydata_5test %>% select(-a)
+mydata_5test$Z <- sample(rep(c(0,1), each = 1, len = 81))
+
+
+```
+
+```{r confidence interval for lm, results='hide', echo = FALSE, message = FALSE, warning=FALSE, include=F}
+
+#'A confidence interval is a collection of not-rejected hypotheses.'
+#Under lm:
+OLS_5_5Bs <- lm(Tariff_c ~ Regime_Bi_c + GDP_c + EC_c + WTO_c, data=mydata_5)
+
+#Under lm assumption:
+confint(OLS_5_5Bs, parm="Regime_Bi_c")
+cicanned_lm <- round(confint(OLS_5_5Bs, parm="Regime_Bi_c"),2)
+
+
+#############
+mytest2ForUniRoot_test<-function(x,y=mydata_5$Tariff_c,z=mydata_5$Regime_Bi_c){
+			 newy<-y-(z*x)
+			 .05-summary(lm(newy~ z + GDP_c + EC_c + WTO_c, data=mydata_5))$coef["z","Pr(>|t|)"]
+}
+
+#mytest2ForUniRoot_test(20)
+#mytest2ForUniRoot(-20)
+upperlim<-uniroot(mytest2ForUniRoot_test,interval=c(0,20),extendInt="no")
+lowerlim<-uniroot(mytest2ForUniRoot_test,interval=c(-20,0),extendInt="no")
+ciroot_lm <- round(c(lowerlim$root,upperlim$root),2)
+
+
+#This is another way to find the confidence interval using uniroot. The function here is still about each new H0 as shown before. The difference is  ".05-summary(lm(newy~z+s))$coef["z","Pr(>|t|)"]".0.05 is the significance level, this line of code will generate positive results if the p value of certain hypothesis is less than 5%, leading to the rejection of that hypothesis.
+
+
+### The root means the solution that makes a function equal to 0, and uniroot command is telling R to find only one solution. Second, the upperlim and lowerlim represent the two-tail test. Both upperlim and lowerlim tell R to search only one root from the interval 0 to 20 or -20 to 0. 
+###"extendInt=No" is telling R not extend search if a different sign cannot be found. In other words, returning to "error" if R cannot find the root with different sign.
+
+cicanned_lm 
+ciroot_lm
+```
+
+
+```{r confidence interval for lmrob, results='hide', echo = FALSE, message = FALSE, warning=FALSE, include=F}
+
+#'A confidence interval is a collection of not-rejected hypotheses.'
+#Under lmrob:
+lmrob_5Bs <- lmrob(Tariff_c ~ Regime_Bi_c + GDP_c + EC_c + WTO_c, data=mydata_5)
+
+confint(lmrob_5Bs, parm="Regime_Bi_c")
+
+cicanned_lmrob <- round (confint(lmrob_5Bs, parm="Regime_Bi_c"), 2)
+
+##############
+
+mytest3ForUniRoot_test<-function(x,y=mydata_5$Tariff_c,z=mydata_5$Regime_Bi_c){
+			 newy<-y-(z*x)
+			 .05-summary(lmrob(newy~ z + GDP_c + EC_c + WTO_c, data=mydata_5))$coef["z","Pr(>|t|)"]
+}
+
+#mytest3ForUniRoot_test(20)
+#mytest3ForUniRoot_test(-20)
+upperlim<-uniroot(mytest3ForUniRoot_test,interval=c(0,20),extendInt="yes")
+lowerlim<-uniroot(mytest3ForUniRoot_test,interval=c(-20,-0.9),extendInt="yes")
+ciroot_lmrob <- round(c(lowerlim$root,upperlim$root),2)
+
+cicanned_lmrob
+ciroot_lmrob
+```
+
+```{r Confidence Interval lm using pvalue, results='hide', echo = FALSE, message = FALSE, warning=FALSE, include=F}
+
+## Confidence interval: choose alpha=.05
+set.seed(19900814)
+
+OLS_5_5Bs <- lm(Tariff_c ~ Regime_Bi_c + GDP_c + EC_c + WTO_c, data=mydata_5)
+simlmtest_lm5Bs <- summary(OLS_5_5Bs)$coef[2,1]
+simlmtest_lm5Bs ##-2.84
+
+
+#Imagine we re-run the "experiment"
+newExp_lm<-function(y){
+  ## A function to randomly assign treatment effect
+shuffledz <- sample(mydata_5test$Z) 
+newlmtest <- coef(lm(y ~ shuffledz+ GDP_c + EC_c + WTO_c, data=mydata_5test))[["shuffledz"]]
+  return(newlmtest)
+}
+
+myTestStat4_lm<-function(x,newz=shuffledz,y=mydata_5test$Tariff_c){
+  shuffledz <- sample(mydata_5test$Z) 
+  newy <- y - (newz*x)
+	coef(lm(newy~ newz + GDP_c + EC_c + WTO_c, data=mydata_5test))[["newz"]]
+}
+
+MyFisherTest4_lm <- function(x,thez){
+  ## return a p-value
+  randDistH0<-replicate(1000, myTestStat4_lm(x=x))
+  pTwoSided <- 2*min(c(mean(randDistH0>=simlmtest_lm5Bs),
+		      mean(randDistH0<=simlmtest_lm5Bs)))
+  return(pTwoSided)
+}
+#######
+######
+library(foreach)
+res1<-foreach(h=seq(-10,10,1),.combine='c') %dopar% {message("."); MyFisherTest4_lm(x=h, thez=mydata_5test$Regime_Bi_c)}
+#Now I can use foreach to execute the function repeatedly, passing it the values -10 through 5, and returning the results in a list, called x
+
+
+printCIres1lm <- rbind(seq(-10,10,1),res1)
+printCIres1lm
+
+#CI for lm by using using permutation here is [-1, 7].
+```
+
+
+```{r Confidence Interval lmrob using pvalue, results='hide', echo = FALSE, message = FALSE, warning=FALSE, include=F}
+
+lmrob_5Bs <- lmrob(Tariff_c ~ Regime_Bi_c + GDP_c + EC_c + WTO_c, data=mydata_5)
+
+simlmrobtest_5Bs <- summary(lmrob_5Bs)$coef[2,1]
+simlmrobtest_5Bs #-3.31
+
+## Confidence interval: choose alpha=.05
+set.seed(2349854)
+#Imagine we re-run the "experiment"
+
+newExp_lmrob<-function(y){
+  ## A function to randomly assign treatment effect
+shuffledz <- sample(mydata_5test$Z) 
+newlmtest <- coef(lmrob(y ~ shuffledz + GDP_c + EC_c + WTO_c, data=mydata_5test))[["shuffledz"]]
+  return(newlmtest)
+}
+
+myTestStat4_lmrob<-function(x,newz=shuffledz,y=mydata_5test$Tariff_c){
+  shuffledz <- sample(mydata_5test$Z) 
+  newy<-y-(newz*x)
+	coef(lmrob(newy ~ newz + GDP_c + EC_c + WTO_c, data=mydata_5test))[["newz"]]
+}
+
+MyFisherTest4_lmrob <- function(x,thez){
+  ## return a p-value
+  randDistH0<-replicate(1000,myTestStat4(x=x))
+  pTwoSided <- 2*min(c(mean(randDistH0>=simlmrobtest_5Bs),
+		      mean(randDistH0<=simlmrobtest_5Bs)))
+  return(pTwoSided)
+}
+#######
+######
+library(foreach)
+res1_lmrob<-foreach(h=seq(-10,5,1),.combine='c') %dopar% {message("."); MyFisherTest4(x=h, thez=mydata_5test$Regime_Bi_c)}
+#Now I can use foreach to execute the function repeatedly, passing it the values -10 through 5, and returning the results in a list, called x
+
+
+printCIres1lmrob <- rbind(seq(-5,5,0.5),res1_lmrob)
+printCIres1lmrob
+
+#CI here is [0,3].
+```
+
+
