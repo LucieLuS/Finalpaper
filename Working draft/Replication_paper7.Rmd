@@ -1194,7 +1194,7 @@ The term "observational study" refers to a situation in which a specific interve
 
 
 
-There is an a priori reason to suspect that there is heteroscedasticity in my data, given that this problem is common in time-series cross-sectional data. Heteroscedasticity occurs when the variance of the errors varies across observations (Long & Ervin, 2000, p.217). In simple words, when the variance of errors is not constant, one of the important assumptions of a linear model, homoscedasticity is violated. In the presence of heteroscedasticity, ordinary least squares estimates are still consistent, but the tests of significance are generally inappropriate because the standard errors obtained from the classic variance covariance matrix are no longer consistent. We will then perform an invalid statistical inference if we do not correct for the possible presence of heteroskedasticity. Figure 2 reveals that we might have a heteroskedasticity problem.
+There is an a priori reason to suspect that there is heteroscedasticity in my data, given that this problem is common in time-series cross-sectional data. Heteroscedasticity occurs when the variance of the errors varies across observations (Long & Ervin, 2000, p. 217). In simple words, when the variance of errors is not constant, one of the important assumptions of a linear model, homoscedasticity is violated. In the presence of heteroscedasticity, ordinary least squares estimates are still consistent, but the tests of significance are generally inappropriate because the standard errors obtained from the classic variance covariance matrix are no longer consistent. We will then perform an invalid statistical inference if we do not correct for the possible presence of heteroskedasticity. Figure 2 reveals that we might have a heteroskedasticity problem.
 
 
 
@@ -1335,7 +1335,7 @@ dimnames(thesigmaHC3_m4)<-list(names(ehat_m4),names(ehat_m4))
 vcovHC3_m4 <- (solve(crossprod(X_m4)) %*% t(X_m4)) %*% (thesigmaHC3_m4) %*% ( X_m4 %*% solve(crossprod(X_m4)))
 
 #car::hccm(OLS_4_0,type="hc3")
-#These are also called ¡°White-corrected¡± or ¡°White-Huber¡± covariance matrices.
+#These are also called ??White-corrected?? or ??White-Huber?? covariance matrices.
 
 sebHC3_m4 <- sqrt(diag(vcovHC3_m4))
 sandsebHC3_m4 <- sqrt(diag(vcovHC(OLS_4_0, type = "HC3")))

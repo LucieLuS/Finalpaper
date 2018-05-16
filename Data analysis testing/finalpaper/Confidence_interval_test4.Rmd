@@ -82,7 +82,6 @@ library("gramr")
 
 library(xtable)
 
-
 ```
 
 
@@ -592,8 +591,6 @@ coeftest(OLS_5_0Bs,vcovWBC_m5_c) # Wild Bootstrap with Clustering by country
 ```
 
 ```{r prepare tables, eval=T, echo=F, results="hide", warning=F}
-
-
 #When considering clustering
 
 
@@ -633,23 +630,20 @@ I simplify my regression without controlling for covariates as the following at 
 $tradepolicy_{i,t} = \beta_0 + \beta_1*DEMOCRACY_{i,t-1} + \varepsilon_i$. 
 
 
-I calculated the unclusterd HC0, HC1, HC2, and HC3 robust standard errors by heteroskedasticity consistent covariance matrix (HCCME) (also known as White robust errors) and by using a "sandwich" R-statistic package. The results are the same, so I know the results from the package are not misleading. I also use the "wild bootstrap" simulation method to cross-check the results. The "HC" standard errors taking into account the Heteroscedasticity and the by-default standard errors are in fact very close.   
+I calculated the unclusterd HC0, HC1, HC2, and HC3 robust standard errors by heteroskedasticity consistent covariance matrix (HCCME) (also known as White robust errors) and by using a "sandwich" R-statistic package. The results are the same, so I know the results from the package are not misleading. I also use the "wild bootstrap" simulation method to cross-check the results. The "HC" standard errors taking into account the Heteroscedasticity in fact smaller than the default standard errors from the OLS. 
 
-The clustered versions of standard errors from different methods are also very close to the unclustered versions. 
+The clustered versions of standard errors from different methods are also very close to the unclustered versions. After controlling for clustering, I note that the using different methods including covariance matrix and wild bootstrap, the clustered standard errors and unclustered standard errors turn out to be very similar. It is possibly due to the fact that I have collapsed the data in different periods for the given countries, so that the correlated model errors in different time periods within the country level have been removed. In other words, the variances over time within-country are no longer present in the dataset. The number of clustering at the country level may still exist, but the standard errors controlling for the unknown form of cluster error correlation do not deviate much from the unclusterd robust standard errors. The previous tables show the comparions of the standard errors calculted by different methods.  
 
 
 ##Confidence Interval
 
 ```{r CI in OLS5_OBS, eval=T, echo=F, results="hide", warning=F}
 #try clustered function by country
-
-#SE_c_func
 coefci(OLS_5_0Bs, parm = NULL, level = 0.95, vcov. = vcov_cm5_c, 
        df = (nrow(mydata_5test)-length(b_m5)))
 
 #try clustered HC1
-#SE_c_hc1
- coefci(OLS_5_0Bs, parm = NULL, level = 0.95, vcov. = vcov_hc1_cm5, 
+coefci(OLS_5_0Bs, parm = NULL, level = 0.95, vcov. = vcov_hc1_cm5, 
        df = (nrow(mydata_5test)-length(b_m5)))
 
 #They are the same
@@ -662,24 +656,107 @@ coefci(OLS_5_0Bs, parm = NULL, level = 0.95, vcov. = vcov_cm5_c,
 vcov_hc1_cm5_5Bs <- cluster.vcov(OLS_5_5Bs, 1:nrow(mydata_5test), df_correction = TRUE)
 coeftest(OLS_5_5Bs, vcov_hc1_cm5_5Bs)
 
-ci_hc1_cm5_5Bs <- coefci(OLS_5_5Bs, parm = NULL, level = 0.95, vcov. = vcov_hc1_cm5_5Bs, 
+coefci(OLS_5_5Bs, parm = NULL, level = 0.95, vcov. = vcov_hc1_cm5_5Bs, 
        df = (nrow(mydata_5test)-length(b_m5)))
 
 
 #CI with Clustering Function
 coeftest(OLS_5_5Bs, vcov_5_5Bs)
 
-ci_func_cm5_5Bs <- coefci(OLS_5_5Bs, parm = NULL, level = 0.95, vcov. = vcov_5_5Bs, 
+coefci(OLS_5_5Bs, parm = NULL, level = 0.95, vcov. = vcov_5_5Bs, 
        df = (nrow(mydata_5test)-length(b_m5)))
 
 ```
 
+```{r, ggplot confidence interval lm and lmrob, eval=T, echo=F, results="asis", warning=F}
 
-```{r bootstrap, and simulations , eval=F, echo=F, results="hide", warning=F}
+par(mfrow=c(2,1))
+
+b <- coeftest(OLS_5_5Bs, vcov_5_5Bs)
+
+#rownames(b)
+
+#rownames <- c("Intercept", "Democracy", "GDP", "Economic Crisis", "WTO")
+
+model1Frame <- data.frame(Variable = rownames(b), 
+                          Coefficient = (b)[,1],
+                          SE = (b)[,2])
+interval <- -qnorm((1-0.95)/2)
+
+zp1 <- ggplot(model1Frame)
+zp1 <- zp1 + geom_hline(yintercept = 0, colour = gray(1/2), lty = 2)
+zp1 <- zp1 + geom_linerange(aes(x = Variable, ymin = Coefficient - SE*interval, ymax = Coefficient + SE*interval),
+                            lwd = 1, position = position_dodge(width = 1/2))
+zp1 <- zp1 + geom_pointrange(aes(x = Variable, y = Coefficient, ymin = Coefficient - SE*interval,
+                                 ymax = Coefficient + SE*interval),
+                             lwd = 1/2, position = position_dodge(width = 1/2),
+                             shape = 21, fill = "WHITE")
+zp1 <- zp1 + coord_flip() + theme_bw()
+zp1 <- zp1 + ggtitle("Confidence Intervals with Robust Standard Errors (lm)")
+print(zp1) 
+
+##
+
+lmrob_5Bs <- lmrob(Tariff_c ~ Regime_Bi_c + GDP_c + EC_c + WTO_c, data=mydata_5)
+
+summary(lmrob_5Bs)
+
+model2Frame <- data.frame(Variable = rownames(summary(lmrob_5Bs)$coef), 
+            Coefficient = summary(lmrob_5Bs)$coef[, 1],
+            SE = summary(lmrob_5Bs)$coef[, 2])
+interval <- -qnorm((1-0.95)/2)
+
+zp2 <- ggplot(model2Frame)
+zp2 <- zp2 + geom_hline(yintercept = 0, colour = gray(1/2), lty = 2)
+zp2 <- zp2 + geom_linerange(aes(x = Variable, ymin = Coefficient - SE*interval, ymax = Coefficient + SE*interval),
+                            lwd = 1, position = position_dodge(width = 1/2))
+zp2 <- zp2 + geom_pointrange(aes(x = Variable, y = Coefficient, ymin = Coefficient - SE*interval,
+                                 ymax = Coefficient + SE*interval),
+                             lwd = 1/2, position = position_dodge(width = 1/2),
+                             shape = 21, fill = "WHITE")
+zp2 <- zp2 + coord_flip() + theme_bw()
+zp2 <- zp2 + ggtitle("Confidence Intervals with Robust Standard Errors (lmrob)")
+print(zp2) 
+```
+
+
+I plotted the confidence intervals computed by the clustered robust standard errors. I assume the standard errors obtained from the clustered function I wrote are accurate because they have corrected for  the possible problem of clustering on the state level and the heteroskedastyin the data structure. I also compute the confidence interval with the White HC1 and the clustered standard errors. They are the same (results are not shown).  
+
+In this plot (on the left), we can see the confidence interval for the targeted estimator includes zero. It means that we cannot reject the null hypothesis that the treatment effect equals to zero.
+
+
+On the right hand side, I ploted the confidence intervals calculated from the default *lmrobust* function. For the targeted estimator, the confidence interval is very close to zero. I cannot reject the possibility that there is no treatment effect. The democratic developing countries on average over time may not have lower tariff rates than non-democratic developing countries.
+
+```{r, ggplot confidence interval lmrob, eval=T, echo=F, results="hide", warning=F, include = F}
+
+lmrob_5Bs <- lmrob(Tariff_c ~ Regime_Bi_c + GDP_c + EC_c + WTO_c, data=mydata_5)
+
+summary(lmrob_5Bs)
+
+model2Frame <- data.frame(Variable = rownames(summary(lmrob_5Bs)$coef), 
+            Coefficient = summary(lmrob_5Bs)$coef[, 1],
+            SE = summary(lmrob_5Bs)$coef[, 2])
+interval <- -qnorm((1-0.95)/2)
+
+zp1 <- ggplot(model2Frame)
+zp1 <- zp1 + geom_hline(yintercept = 0, colour = gray(1/2), lty = 2)
+zp1 <- zp1 + geom_linerange(aes(x = Variable, ymin = Coefficient - SE*interval, ymax = Coefficient + SE*interval),
+                            lwd = 1, position = position_dodge(width = 1/2))
+zp1 <- zp1 + geom_pointrange(aes(x = Variable, y = Coefficient, ymin = Coefficient - SE*interval,
+                                 ymax = Coefficient + SE*interval),
+                             lwd = 1/2, position = position_dodge(width = 1/2),
+                             shape = 21, fill = "WHITE")
+zp1 <- zp1 + coord_flip() + theme_bw()
+zp1 <- zp1 + ggtitle("Confidence Intervals with Robust Standard Errors (lmrob)")
+print(zp1) 
+```
+
+
+
+```{r bootstrap, and simulations , eval=F, echo=F, results="hide", warning=F, include=F}
 
 OLS_5_5Bs <- lm(Tariff_c ~ Regime_Bi_c + GDP_c + EC_c + WTO_c, data=mydata_5)
-#summary(OLS_5_5Bs)$coefficient[2]
-
+#summary(OLS_5_5Bs)
 
 #nsamps<-1000
 #sampfits<-data.frame(t(replicate(nsamps,coef(lm(milworry~age3,data=sample_n(chile90[,c("age3","milworry")],size=100,replace=FALSE))))))
@@ -709,7 +786,7 @@ CI_lm_m1
 ```
 
 
-```{r confidence interval}
+```{r confidence interval, eval=F, echo=F, results="hide", warning=F, include=F}
 set.seed (20892380)
 nsamps<-10000
 resample_original<-data.frame(t
@@ -723,39 +800,9 @@ resample_original<-data.frame(t
   quantile(resample_original[,"Regime_Bi_c"],c(.025,.975))
   round( quantile(resample_original[,"Regime_Bi_c"],c(.025,.975)),2)
   #Confidence interval [-9.13, 1.28]
-  
-  
 ```
 
-```{r check coverage rate of confidence interval}
-nc <- 0
-for (j in 1:1000)
-{
-nsamps<-1000
-resample_original<-data.frame(t
-                              (replicate(nsamps,
-      coef(lm(Tariff_c ~ Regime_Bi_c + mydata_5$GDP_c + mydata_5$EC_c + mydata_5$WTO_c,
-              data=sample_n(mydata_5[,c("Regime_Bi_c","Tariff_c")],size=81,replace=T))))))
-
-  #plot(density(resample_original$Regime_Bi_c), main = "Distribution of the test statistic using bootstrap approach")
-  #abline(v=as.numeric(coef(OLS_5_5Bs)[2]), lwd=3, col= "gold")
-  
-  M_t <- sort(resample_original[,"Regime_Bi_c"])
-  C = c(M_t[25],M_t[975])
-  if  ( (C[1] < 0) & (C[2] > 0) ) { nc = nc+1 }
-}
-
-CP[j] = nc/1000
-  
-  #quantile(resample_original[,"Regime_Bi_c"],c(.025,.975))
-  #round( quantile(resample_original[,"Regime_Bi_c"],c(.025,.975)),2)
-  #Confidence interval [-9.13, 1.28]
-  
-  
-```
-
-
-```{r coverage interval}
+```{r coverage interval, eval=F, echo=F, results="hide", warning=F, include=F}
 
 set.seed (20892380)
 nsamps<-10000
@@ -773,53 +820,18 @@ resample_original<-data.frame(t
 ```
 
 
-```{r Check performance of standard error coverage probabilities for standard OLS, eval=F, include=F, echo=F}
-
-
-CP <- NULL
-for (j in 1:100)
-{
-resample_original<-data.frame(t
-                              (replicate(1000,
-      coef(lm(Tariff_c ~ Regime_Bi_c + mydata_5$GDP_c + mydata_5$EC_c + mydata_5$WTO_c,
-              data=sample_n(mydata_5[,c("Regime_Bi_c","Tariff_c")],size=81,replace=F))))))
-
-
-## Coverage probabilities.
-n  <- 81
-SE <- SEOLS_m5[1]
-## Simulate a data set.
-X <- resample_original
-## Construct the CI.
-M <- X[,2]
-C <- 1.96*SE/sqrt(n)
-truth <- mean(M)
-## Check for coverage.
-ci <- ( (M - C <= truth) & (M + C >= truth)) 
-# so that it is
-#ci <- (M-C)<=0 # if the coefficient is positive
-#ci <- (M+C)>=0 # if the coefficient is negative
-# Then do
-mean(ci)
-CP[j] <- mean(ci)
-}
-
-covprob <- mean(CP)
-
-```
-
 I also use a simulation method for estimating the coverage probability of the confidence interval calculated from the robust standard error I calculated. Because I have a relatively large sample, I compute the 95% confidence interval as an asymptotic one: $$\hat\beta$$ +/- 1.96*se. After I obtained the confidence interval, I need to check its coverage probability. 
 
 
 Here I explain how I proceed to calculate the coverage probability of the confidence interval. Under simulation, I had 1000 samples drawn from the same population (of sample size from original dataset without replacement). I then use the standard error to compute the confidence interval for each sample. I then computed the proportion of samples for which the *true* mean of the 'population' fall into the confidence interval in each of the 1000 iterations. In such a large repetaed samples, I want to check if the confidence intervals include the true population paramter 95 precent of the time. 
 
 
-Unfortunately, the confidence interval fails to meet its desired object. 100% of the estimated confidence intervals contain the true population mean. This confidence interval is too wide, including the True paramter more than it should. I will risk higher probabilities of accepting a null hypothesis when it is false.   
+Unfortunately, the confidence interval fails to meet its desired object. 100% of the estimated confidence intervals contain the true population mean. This confidence interval is too wide, including the True paramter more than it should. I will risk accepting a null hypothesis when it is false. In other words, my hypothesis testing is underpower: I may fail to reject a null hypothesis when it is false. 
 
 
-Or, this result may suggest that my method of calculating the coverage probability is not correct.
+It suggests my standard errors are not accurate, or my hypothesis testing fails to achieve its purpose. Or, this result may suggest that my method of calculating the coverage probability is not correct.
 
-```{r one last time Check performance of standard error coverage probabilities for standard OLS, eval=T, includ = F}
+```{r one last time Check performance of standard error coverage probabilities for standard OLS, eval=T, echo=F, results="hide", include = F}
 
 
 CP <- NULL
@@ -855,5 +867,13 @@ CP[j] <- mean(ci)
 }
 
 CP[j]
+
+```
+
+```{r, results='asis', echo=FALSE}
+cat("\\newpage")
+```
+
+```{r appendix, ref.label=knitr::all_labels(),echo=TRUE,eval=FALSE}
 
 ```

@@ -2,6 +2,7 @@
 title: "First Draft of Final Paper"
 author: "Lucie Lu"
 date: "March 19, 2018"
+geometry: margin=1.5inch
 output: pdf_document
 ---
 

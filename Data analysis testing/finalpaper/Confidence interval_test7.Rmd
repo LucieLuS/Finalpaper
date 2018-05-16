@@ -2,7 +2,9 @@
 title: "Statistical Inferences II (Confidence Interval)"
 author: "Lucie Lu"
 date: "May 13, 2018"
+geometry: margin=1.5in
 output: pdf_document
+
 ---
 
 ```{r global_options, include=FALSE, cache=FALSE}
@@ -26,7 +28,6 @@ opts_chunk$set(
   comment=NA)
 
 ```
-
 
 
 
@@ -82,7 +83,6 @@ library("gramr")
 
 library(xtable)
 
-
 ```
 
 
@@ -96,18 +96,22 @@ list.files(path=".")
 load("mydata_5collapseyear.rda")
 ```
 
-##Confidence Invertals
-
-In the previous section, I have obtained the p-value by repeatedly calculating the test statistic from a large number of permutations of the data. On its surface, the permutation confidence interval in this section is simply the set of all values of the parameter for which the null hypothesis is not rejected. To obtain a confidence interval, I tried to use some p-values to test different hypotheses to create a collection of non-rejected hypotheses. This is the confidence interval from the permutation tests.   
+##Permutation Confidence Invertals
 
 
-My null hypothesis are addictive treatment effects. I used two methods to calculate the confidence intervals: one with the uniroot function to find two tails of confidence limits where the p value from the *lm* or *lmrob* function of certain hypothesis is less than 5%, leading to the rejection of that hypothesis. This one is a CLT+IID based test.    
+In the previous section, I have obtained the p-value by repeatedly calculating the test statistic from a large number of permutations of the data. On its surface, the permutation confidence interval in this section is simply the set of all values of the parameter for which the null hypothesis is not rejected. To obtain a confidence interval, I tried to use some p-values to test a numer of different hypotheses to create a collection of non-rejected hypotheses. This is how we calculate the confidence interval from the permutation tests.   
+
+
+My null hypotheses in this hypothesis testing are addictive treatment effects. I used two methods to calculate the confidence intervals: one with the *uniroot* function to find two tails of confidence limits where the p-value from the *lm* or *lmrob* function of the certain hypothesis is less than 5%, which is the conventional benchmark of leading to the rejection of that hypothesis. The confidence interval calculated from this method agrees with the default confidence interval in the *lm* function. The assumption of this method is a central limit theorem (CLT) and independent identically distributed random samples (iid).
   
   
-The second test sets the significance level 0.05, and specify the confidence coefficient 0.95 to reflect the true coverage probability. I created null hypotheses as a constant addictive effect and compute an intervavl estimate where the right and left end points' p values are approximately equal to 0.05. Within the two-sided confidence intervals, the estimates' p-values are larger than 0.05. I show part of the procedure in this method in table "Searching for non-rejected intervals under permuation for lm and lmrob models."
+  
+The second test sets the significance level 0.05, and specify the confidence coefficient 0.95 to reflect the true coverage probability. I created null hypotheses as a constant addictive effect and compute an interval estimate where the right and left end points' p values are approximately equal to 0.05. Within the two-sided confidence intervals, the estimates' p-values are larger than 0.05. I show part of the procedure in this method in table "Searching for non-rejected intervals under permutation for *lm* and *lmrob* models."
+
 
  
-From the table we can see this second method (see the results in the "permuted lm confidence interval" and "permuted lmrob confidence interval") produces confidence intervals that do not accord with the first method. This may be due to some coding issues that I cannot figure it out at this moment.
+From the table we can see this second method (see the results in the "permuted lm confidence interval" and "permuted *lmrob* confidence interval") produces confidence intervals that do not accord with the first method. At this moment, I cannot figure out why the confidence intervals in the second method have no overlap with the ones in the first method. 
+
 
 
 ```{r check OLS estimates unbiasedness, results='hide', eval = TRUE, echo = FALSE, message = FALSE, warning=FALSE, include=F}
@@ -115,7 +119,7 @@ From the table we can see this second method (see the results in the "permuted l
 OLS_5_0Bs <- lm(Tariff_c ~ Regime_Bi_c, data=mydata_5)
 summary(OLS_5_0Bs)$coefficient[2,1] #-4.29
 
-OLS_5_5Bs <- lm(Tariff_c ~ Regime_Bi_c + GDP_c + EC_c + WTO_c, data=mydata_5)
+OLS_5_5Bs <- lm(Tariff_c ~ Regime_Bi_c + log(GDP_c) + EC_c + WTO_c, data=mydata_5)
 summary(OLS_5_5Bs)$coefficient[2,1] #-2.84
 
 ############
@@ -138,7 +142,7 @@ mydata_5test$Z <- sample(rep(c(0,1), each = 1, len = 81))
 
 #'A confidence interval is a collection of not-rejected hypotheses.'
 #Under lm:
-OLS_5_5Bs <- lm(Tariff_c ~ Regime_Bi_c + GDP_c + EC_c + WTO_c, data=mydata_5)
+OLS_5_5Bs <- lm(Tariff_c ~ Regime_Bi_c + log(GDP_c) + EC_c + WTO_c, data=mydata_5)
 
 #Under lm assumption:
 confint(OLS_5_5Bs, parm="Regime_Bi_c")
@@ -173,7 +177,7 @@ ciroot_lm
 
 #'A confidence interval is a collection of not-rejected hypotheses.'
 #Under lmrob:
-lmrob_5Bs <- lmrob(Tariff_c ~ Regime_Bi_c + GDP_c + EC_c + WTO_c, data=mydata_5)
+lmrob_5Bs <- lmrob(Tariff_c ~ Regime_Bi_c + log(GDP_c) + EC_c + WTO_c, data=mydata_5)
 
 confint(lmrob_5Bs, parm="Regime_Bi_c")
 
@@ -209,7 +213,7 @@ ciroot_lmrob
 ## Confidence interval: choose alpha=.05
 set.seed(2349854)
 
-OLS_5_5Bs <- lm(Tariff_c ~ Regime_Bi_c + GDP_c + EC_c + WTO_c, data=mydata_5)
+OLS_5_5Bs <- lm(Tariff_c ~ Regime_Bi_c + log(GDP_c) + EC_c + WTO_c, data=mydata_5)
 simlmtest_lm5Bs <- summary(OLS_5_5Bs)$coef[2,1]
 simlmtest_lm5Bs #-2.386
 
@@ -252,7 +256,7 @@ printCIres1lm
 
 ```{r Confidence Interval lmrob using pvalue, results='hide', echo = FALSE, eval=T, message = FALSE, warning=FALSE, include=F}
 
-lmrob_5Bs <- lmrob(Tariff_c ~ Regime_Bi_c + GDP_c + EC_c + WTO_c, data=mydata_5, control = lmrob.control(max.it = 100))
+lmrob_5Bs <- lmrob(Tariff_c ~ Regime_Bi_c + log(GDP_c) + EC_c + WTO_c, data=mydata_5, control = lmrob.control(max.it = 100))
 
 simlmrobtest_5Bs <- summary(lmrob_5Bs)$coef[2,1]
 simlmrobtest_5Bs #-3.31
@@ -316,8 +320,8 @@ xtable(ci_permute)
 
 ```{r non-rejected intervals under permuation, results='asis', echo = FALSE, eval=T, message = FALSE, warning=FALSE}
 
-print(xtable::xtable(ci_permute, caption = "Searching for non-rejected intervals under permuation for lm and lmrob models"),type = "latex",
-      html.table.attributes="border=1", comment=F, width = "\\textwidth", floating = F)
+print(xtable::xtable(ci_permute, caption = "Searching for non-rejected intervals under permuation for lm and lmrob models"), width = "\\textwidth", type = "latex", html.table.attributes="border=1", comment=FALSE, floating = "false")
+      
 ```
 
 ```{r create Xtable to collect p-values and confidence interval, results='hide', echo = FALSE, eval=T, message = FALSE, warning=FALSE}
@@ -335,14 +339,57 @@ collect_ci_test
 ```{r collect confidence interval2, results='asis', echo = FALSE, eval=T, message = FALSE, warning=FALSE}
 
 print(xtable::xtable(collect_ci_test, caption = "Collections of Confudence Intervals under pumutation for lm and lmrob models"),type = "latex",
-      html.table.attributes="border=1", comment=F, floating = F)
+      html.table.attributes="border=1", comment=FALSE, floating = "false")
+
+
 ```
+
+#Statistical Inference and Assessment Strategies II
+
+When I have a relatively large sample (N=81), the central limit theory and asymptotic theory can help me not to actually conduct a permutation test to do the hypothesis testing. This hypothetical experimental pool is fairly large. When we have a large sample size of observation, we know as the sample size increases, the samples means will follow an approximately normal distribution. A second method that works well in my dataset is to use mathematical formulas for standard errors that relax the IID assumption and resist highly influential points in a variety of ways (like the "HC" standard errors and the "Robust Cluster" standard errors). What matters is to correct the OLS standard errors. In this section, I will use a simple univariate regression model to demonstrate the process of using a variety of ways to calculate the robust standard errors from the *lm* model.    
+
+
+In my dataset, I worry about the assumption of IID because I suspect the random variables are not independent and identically distributed because I do not know how the observational data are generated. There is an a priori reason to suspect that there is heteroscedasticity in my data, given that this problem is common in cross-sectional data. Heteroscedasticity occurs when the variance of the errors varies across observations (Long & Ervin, 2000, p. 217). In simple words, when the variance of errors is not constant, one of the important assumptions of a linear model, homoscedasticity is violated. In the presence of heteroscedasticity, ordinary least squares estimates are still consistent, but the tests of significance are generally inappropriate because the standard errors obtained from the classic variance covariance matrix are no longer consistent. We will then perform an invalid statistical inference if we do not correct for the possible presence of heteroskedasticity. Figure 2 reveals that we might have a heteroskedasticity problem.
+
+
+```{r, eval=T, echo=F, results="hide", warning=F} 
+
+OLS_5_5Bs <- lm(Tariff_c ~ Regime_Bi_c + log(GDP_c) + EC_c + WTO_c, data=mydata_5)
+
+library(ggplot2)
+
+ggplot(data=NULL, aes(OLS_5_5Bs$fitted.values, OLS_5_5Bs$residuals^2))+
+  geom_point()+
+  geom_hline(yintercept = 0)+
+  theme_classic()+
+  xlab("fitted values")+
+  ylab("squared residuals")
+
+```
+
+
+
+I simplify my regression without controlling for covariates as the following at this moment:
+$Tariff_{i,t} = \beta_0 + \beta_1*Democarcy_{i,t-1} + \varepsilon_i$. The standard errors drawn from the OLS canned function will be biased if there is a presence of heteroskedasticity of unknown form in my dataset. Note that the assumption the variance of the error term for each x is constant (Homoskedasticity) is not necessary to show that OLS estimators are unbiased. Heteroscedasticity occurs when the variance of the errors varies across observations (Long & Ervin, 2000, p.217). In simple words, when the variance of errors is not constant, one of the important assumptions of a linear model, homoscedasticity is violated. In the presence of heteroscedasticity, ordinary least squares estimates are still consistent, but the tests of significance are generally inappropriate because the standard errors obtained from the classic variance covariance matrix are no longer consistent. We will then perform an invalid statistical inference if we do not correct for the possible presence of heteroskedasticity. Figure 2 reveals that we might have a heteroskedasticity problem.
+
+
+Here, I use a avariety of approaches to correct OLS standard errors, by hands and by using packages. The table shows that the results are similar.
+
+
+To apply the heteroskedasticity consistent covariance matrix (HCCME), I simplify my regression without controlling for covariates as the following at this moment:
+$tradepolicy_{i,t} = \beta_0 + \beta_1*DEMOCRACY_{i,t-1} + \varepsilon_i$. 
+
+
+I calculated the unclusterd HC0, HC1, HC2, and HC3 robust standard errors by heteroskedasticity consistent covariance matrix (HCCME) (also known as White robust errors) and by using a "sandwich" R-statistic package. The results are the same, so I know the results computed by the programming packages are reliable in a more complicated model. According to (Long & Ervin, 2000), HC0 is the most commonly used, but HC3-based test is more reliable when the sample size is smaller than 250. I also use the "wild bootstrap" simulation method to cross-check the results. The "HC" standard errors taking into account the Heteroscedasticity in fact smaller than the default standard errors from the OLS.   
+
+
+The clustered versions of standard errors from different methods are also very close to the unclustered versions. After controlling for clustering, I note that the using different methods including covariance matrix and wild bootstrap, the clustered standard errors and unclustered standard errors turn out to be very similar. It is possibly due to the fact that I have collapsed the data in different periods for the given countries, so that the correlated model errors in different time periods within the country level have been removed. In other words, the variances over time within-country are no longer present in the dataset. The number of clustering at the country level may still exist, but the standard errors controlling for the unknown form of cluster error correlation do not deviate much from the unclusterd robust standard errors. The previous tables show the comparions of the standard errors calculted by different methods.  
 
 
 
 ```{r create covariates matrix, eval=T, echo=F, results="hide"} 
 
-#OLS_5_5Bs <- lm(Tariff_c ~ Regime_Bi_c + GDP_c + EC_c + WTO_c, data=mydata_5)
+#OLS_5_5Bs <- lm(Tariff_c ~ Regime_Bi_c + log(GDP_c) + EC_c + WTO_c, data=mydata_5)
 
 OLS_5_0Bs <- lm(Tariff_c ~ Regime_Bi_c, data=mydata_5)
 summary(OLS_5_0Bs)
@@ -482,8 +529,9 @@ xtable(SEcol1)
 ```
 
 ```{r print SE1, results = "asis", eval=T, echo=F, message = FALSE, warning = FALSE}
+
 print(xtable::xtable(SEcol1, caption = "Calculating Standard Errors under Heteroskedasticity"),type = "latex",
-      html.table.attributes="border=1", comment=F, floating = F)
+      html.table.attributes="border=1",comment=FALSE, floating = "false")
 
 ```
 
@@ -541,7 +589,7 @@ coefs <- robustse_test(OLS_5_0Bs, mydata_5test$CountryF)[[2]]
 
 ```{r clutsering SEs in OLS_5_5Bs, eval=T, echo=F, results="hide", warning=F} 
 
-OLS_5_5Bs <- lm(Tariff_c ~ Regime_Bi_c + GDP_c + EC_c + WTO_c, data=mydata_5)
+OLS_5_5Bs <- lm(Tariff_c ~ Regime_Bi_c + log(GDP_c) + EC_c + WTO_c, data=mydata_5)
 summary(OLS_5_5Bs)
 
 robustse_test <- function(model, cluster){
@@ -592,16 +640,14 @@ coeftest(OLS_5_0Bs,vcovWBC_m5_c) # Wild Bootstrap with Clustering by country
 ```
 
 ```{r prepare tables, eval=T, echo=F, results="hide", warning=F}
-
-
 #When considering clustering
 
 
 #robust covariance matrix vcovHC
-SE_c_hc0 <- sqrt((vcov_hc0_cm5)[2,2])
-SE_c_hc1 <- sqrt((vcov_hc1_cm5)[2,2])
-SE_c_hc2 <- sqrt((vcov_hc2_cm5)[2,2])
-SE_c_hc3 <- sqrt((vcov_hc3_cm5)[2,2])
+SE_c_hc0 <- sqrt(vcov_hc0_cm5)[2,2]
+SE_c_hc1 <- sqrt(vcov_hc1_cm5)[2,2]
+SE_c_hc2 <- sqrt(vcov_hc2_cm5)[2,2]
+SE_c_hc3 <- sqrt(vcov_hc3_cm5)[2,2]
 SE_c_func <- robustse_test(OLS_5_0Bs, mydata_5test$CountryF)[[2]][2,2]
 SE_w <- sqrt((vcovWB_m5)[2,2])
 SE_c_w <- sqrt((vcovWBC_m5_c)[2,2])
@@ -619,37 +665,20 @@ xtable(SEcol2)
 
 ```{r print SE2, results = "asis", eval=T, echo=F, message = FALSE, warning = FALSE}
 print(xtable::xtable(SEcol2, caption = "Calculating Robust Standard Errors consider Clustering"),type = "latex",
-      html.table.attributes="border=1", comment=F, floating = F)
+      html.table.attributes="border=1", comment=FALSE, floating = "false")
 
 ```
 
-The standard errors drawn from the OLS canned function will be biased if there is a presence of heteroskedasticity of unknown form in my dataset. Note that the assumption the variance of the error term for each x is constant (Homoskedasticity) is not necessary to show that OLS estimators are unbiased. Heteroscedasticity occurs when the variance of the errors varies across observations (Long & Ervin, 2000, p.217). In simple words, when the variance of errors is not constant, one of the important assumptions of a linear model, homoscedasticity is violated. In the presence of heteroscedasticity, ordinary least squares estimates are still consistent, but the tests of significance are generally inappropriate because the standard errors obtained from the classic variance covariance matrix are no longer consistent. We will then perform an invalid statistical inference if we do not correct for the possible presence of heteroskedasticity. Figure 2 reveals that we might have a heteroskedasticity problem.
 
-
-Here, I use a avariety of approaches to correct OLS standard errors, by hands and by using packages. The table shows that the results are similar.
-
-
-I simplify my regression without controlling for covariates as the following at this moment:
-$tradepolicy_{i,t} = \beta_0 + \beta_1*DEMOCRACY_{i,t-1} + \varepsilon_i$. 
-
-
-I calculated the unclusterd HC0, HC1, HC2, and HC3 robust standard errors by heteroskedasticity consistent covariance matrix (HCCME) (also known as White robust errors) and by using a "sandwich" R-statistic package. The results are the same, so I know the results from the package are not misleading. I also use the "wild bootstrap" simulation method to cross-check the results. The "HC" standard errors taking into account the Heteroscedasticity and the by-default standard errors are in fact very close.   
-
-The clustered versions of standard errors from different methods are also very close to the unclustered versions. 
-
-
-##Confidence Interval
+##Confidence Intervals computed by Robust Standard Errors
 
 ```{r CI in OLS5_OBS, eval=T, echo=F, results="hide", warning=F}
 #try clustered function by country
-
-#SE_c_func
 coefci(OLS_5_0Bs, parm = NULL, level = 0.95, vcov. = vcov_cm5_c, 
        df = (nrow(mydata_5test)-length(b_m5)))
 
 #try clustered HC1
-#SE_c_hc1
- coefci(OLS_5_0Bs, parm = NULL, level = 0.95, vcov. = vcov_hc1_cm5, 
+coefci(OLS_5_0Bs, parm = NULL, level = 0.95, vcov. = vcov_hc1_cm5, 
        df = (nrow(mydata_5test)-length(b_m5)))
 
 #They are the same
@@ -662,24 +691,99 @@ coefci(OLS_5_0Bs, parm = NULL, level = 0.95, vcov. = vcov_cm5_c,
 vcov_hc1_cm5_5Bs <- cluster.vcov(OLS_5_5Bs, 1:nrow(mydata_5test), df_correction = TRUE)
 coeftest(OLS_5_5Bs, vcov_hc1_cm5_5Bs)
 
-ci_hc1_cm5_5Bs <- coefci(OLS_5_5Bs, parm = NULL, level = 0.95, vcov. = vcov_hc1_cm5_5Bs, 
+coefci(OLS_5_5Bs, parm = NULL, level = 0.95, vcov. = vcov_hc1_cm5_5Bs, 
        df = (nrow(mydata_5test)-length(b_m5)))
 
 
 #CI with Clustering Function
 coeftest(OLS_5_5Bs, vcov_5_5Bs)
 
-ci_func_cm5_5Bs <- coefci(OLS_5_5Bs, parm = NULL, level = 0.95, vcov. = vcov_5_5Bs, 
+coefci(OLS_5_5Bs, parm = NULL, level = 0.95, vcov. = vcov_5_5Bs, 
        df = (nrow(mydata_5test)-length(b_m5)))
 
 ```
 
+```{r, ggplot confidence interval lm and lmrob, eval=T, echo=F, results="asis", warning=F}
 
-```{r bootstrap, and simulations , eval=F, echo=F, results="hide", warning=F}
+b <- coeftest(OLS_5_5Bs, vcov_5_5Bs)
 
-OLS_5_5Bs <- lm(Tariff_c ~ Regime_Bi_c + GDP_c + EC_c + WTO_c, data=mydata_5)
-#summary(OLS_5_5Bs)$coefficient[2]
+#rownames(b)
 
+#rownames <- c("Intercept", "Democracy", "GDP", "Economic Crisis", "WTO")
+
+model1Frame <- data.frame(Variable = rownames(b), 
+                          Coefficient = (b)[,1],
+                          SE = (b)[,2])
+interval <- -qnorm((1-0.95)/2)
+
+zp1 <- ggplot(model1Frame)
+zp1 <- zp1 + geom_hline(yintercept = 0, colour = gray(1/2), lty = 2)
+zp1 <- zp1 + geom_linerange(aes(x = Variable, ymin = Coefficient - SE*interval, ymax = Coefficient + SE*interval),
+                            lwd = 1, position = position_dodge(width = 1/2))
+zp1 <- zp1 + geom_pointrange(aes(x = Variable, y = Coefficient, ymin = Coefficient - SE*interval,
+                                 ymax = Coefficient + SE*interval),
+                             lwd = 1/2, position = position_dodge(width = 1/2),
+                             shape = 21, fill = "WHITE")
+zp1 <- zp1 + coord_flip() + theme_bw()
+zp1 <- zp1 + ggtitle("Confidence Intervals with Robust Standard Errors (lm)")
+print(zp1) 
+
+
+```
+
+```{r my finalized OLS1 Table, results='asis', echo = FALSE, message = FALSE, warning=FALSE}
+
+library(stargazer)
+stargazer(b, lmrob_5Bs, header = FALSE, df = FALSE,
+          title = "Multiple Linear Regression Model: Results (with Robust Standard Errors)",
+          covariate.labels = c("Democracy", "GDP per capita (log)", "Economic Crisis", "GATT/WTO Member"),
+          dep.var.labels = "Tariff Rates", 
+          column.sep.width = "0.3pt", no.space = TRUE, font.size = "footnotesize")
+
+```
+
+I plotted the confidence intervals computed by the clustered robust standard errors in the complete *lm* model with covariates. I assume the standard errors obtained from the clustered function I wrote are accurate because they have corrected for the possible problems of clustering on the state level and the heteroskedasty in the data structure. I also verified the results from the clustered function are not misleading because they tend to agree with the other methods. Because I do not know the structure of heteroskedasticity, it is safe to
+use the clustered robust standard errors. I also compute the confidence interval with the White HC3 and the clustered standard errors. They are the same (results are not shown).  
+
+
+
+In the first plot entitled "Confidence Intervals with Robust Standard Errors (lm)", we can see the confidence interval for the targeted estimator includes zero. It means that I cannot reject the null hypothesis that the treatment effect (the effects of democracies on tariff rates) equals to zero. In addition, although the confidence intervals of log(GDP) and economic crisis do not include zero, they are pretty close to it. Also, the robust standard error for economic crisis is quite large, and hence the confidence interval is wide, which suggests the certainty of this estimate is also large.    
+
+
+The second plot shows the confidence intervals calculated from the default *lmrobust* function. For all the estimators, the confidence intervals are very close to zero. I cannot reject the possibility that there is no treatment effect. Democratic developing countries on average over time may not have lower tariff rates than non-democratic developing countries.  
+
+
+
+```{r, ggplot confidence interval lmrob, eval=T, echo=F, results="asis", warning=F}
+
+
+lmrob_5Bs <- lmrob(Tariff_c ~ Regime_Bi_c + log(GDP_c) + EC_c + WTO_c, data=mydata_5)
+
+
+model2Frame <- data.frame(Variable = rownames(summary(lmrob_5Bs)$coef), 
+            Coefficient = summary(lmrob_5Bs)$coef[, 1],
+            SE = summary(lmrob_5Bs)$coef[, 2])
+interval <- -qnorm((1-0.95)/2)
+
+zp2 <- ggplot(model2Frame)
+zp2 <- zp2 + geom_hline(yintercept = 0, colour = gray(1/2), lty = 2)
+zp2 <- zp2 + geom_linerange(aes(x = Variable, ymin = Coefficient - SE*interval, ymax = Coefficient + SE*interval),
+                            lwd = 1, position = position_dodge(width = 1/2))
+zp2 <- zp2 + geom_pointrange(aes(x = Variable, y = Coefficient, ymin = Coefficient - SE*interval,
+                                 ymax = Coefficient + SE*interval),
+                             lwd = 1/2, position = position_dodge(width = 1/2),
+                             shape = 21, fill = "WHITE")
+zp2 <- zp2 + coord_flip() + theme_bw()
+zp2 <- zp2 + ggtitle("Confidence Intervals with Robust Standard Errors (lmrob)")
+print(zp2) 
+```
+
+
+
+```{r bootstrap, and simulations , eval=F, echo=F, results="hide", warning=F, include=F}
+
+OLS_5_5Bs <- lm(Tariff_c ~ Regime_Bi_c + log(GDP_c) + EC_c + WTO_c, data=mydata_5)
+#summary(OLS_5_5Bs)
 
 #nsamps<-1000
 #sampfits<-data.frame(t(replicate(nsamps,coef(lm(milworry~age3,data=sample_n(chile90[,c("age3","milworry")],size=100,replace=FALSE))))))
@@ -709,7 +813,7 @@ CI_lm_m1
 ```
 
 
-```{r confidence interval}
+```{r confidence interval, eval=F, echo=F, results="hide", warning=F, include=F}
 set.seed (20892380)
 nsamps<-10000
 resample_original<-data.frame(t
@@ -723,39 +827,9 @@ resample_original<-data.frame(t
   quantile(resample_original[,"Regime_Bi_c"],c(.025,.975))
   round( quantile(resample_original[,"Regime_Bi_c"],c(.025,.975)),2)
   #Confidence interval [-9.13, 1.28]
-  
-  
 ```
 
-```{r check coverage rate of confidence interval}
-nc <- 0
-for (j in 1:1000)
-{
-nsamps<-1000
-resample_original<-data.frame(t
-                              (replicate(nsamps,
-      coef(lm(Tariff_c ~ Regime_Bi_c + mydata_5$GDP_c + mydata_5$EC_c + mydata_5$WTO_c,
-              data=sample_n(mydata_5[,c("Regime_Bi_c","Tariff_c")],size=81,replace=T))))))
-
-  #plot(density(resample_original$Regime_Bi_c), main = "Distribution of the test statistic using bootstrap approach")
-  #abline(v=as.numeric(coef(OLS_5_5Bs)[2]), lwd=3, col= "gold")
-  
-  M_t <- sort(resample_original[,"Regime_Bi_c"])
-  C = c(M_t[25],M_t[975])
-  if  ( (C[1] < 0) & (C[2] > 0) ) { nc = nc+1 }
-}
-
-CP[j] = nc/1000
-  
-  #quantile(resample_original[,"Regime_Bi_c"],c(.025,.975))
-  #round( quantile(resample_original[,"Regime_Bi_c"],c(.025,.975)),2)
-  #Confidence interval [-9.13, 1.28]
-  
-  
-```
-
-
-```{r coverage interval}
+```{r coverage interval, eval=F, echo=F, results="hide", warning=F, include=F}
 
 set.seed (20892380)
 nsamps<-10000
@@ -772,54 +846,23 @@ resample_original<-data.frame(t
    round(quantile(resample_original[,"Regime_Bi_c"],c(.025,.975)),2)
 ```
 
-
-```{r Check performance of standard error coverage probabilities for standard OLS, eval=F, include=F, echo=F}
-
-
-CP <- NULL
-for (j in 1:100)
-{
-resample_original<-data.frame(t
-                              (replicate(1000,
-      coef(lm(Tariff_c ~ Regime_Bi_c + mydata_5$GDP_c + mydata_5$EC_c + mydata_5$WTO_c,
-              data=sample_n(mydata_5[,c("Regime_Bi_c","Tariff_c")],size=81,replace=F))))))
+     
+##Coverage Probability of the Confidence Interval
 
 
-## Coverage probabilities.
-n  <- 81
-SE <- SEOLS_m5[1]
-## Simulate a data set.
-X <- resample_original
-## Construct the CI.
-M <- X[,2]
-C <- 1.96*SE/sqrt(n)
-truth <- mean(M)
-## Check for coverage.
-ci <- ( (M - C <= truth) & (M + C >= truth)) 
-# so that it is
-#ci <- (M-C)<=0 # if the coefficient is positive
-#ci <- (M+C)>=0 # if the coefficient is negative
-# Then do
-mean(ci)
-CP[j] <- mean(ci)
-}
-
-covprob <- mean(CP)
-
-```
-
-I also use a simulation method for estimating the coverage probability of the confidence interval calculated from the robust standard error I calculated. Because I have a relatively large sample, I compute the 95% confidence interval as an asymptotic one: $$\hat\beta$$ +/- 1.96*se. After I obtained the confidence interval, I need to check its coverage probability. 
+I also use a simulation method for estimating the coverage probability of the confidence interval calculated from the robust standard error I calculated. Because I have a relatively large sample, I compute the 95% confidence interval as an asymptotic one: $\hat\beta plus or minus 1.96*se$. After I obtained the confidence interval, I need to check its coverage probability. 
 
 
-Here I explain how I proceed to calculate the coverage probability of the confidence interval. Under simulation, I had 1000 samples drawn from the same population (of sample size from original dataset without replacement). I then use the standard error to compute the confidence interval for each sample. I then computed the proportion of samples for which the *true* mean of the 'population' fall into the confidence interval in each of the 1000 iterations. In such a large repetaed samples, I want to check if the confidence intervals include the true population paramter 95 precent of the time. 
+Here I explain how I proceed to calculate the coverage probability of the confidence interval. Under simulation, I had 1000 samples drawn from the same population (of a sample size from original dataset without replacement). I then use the standard error to compute the confidence interval for each sample. I then computed the proportion of samples for which the *true* mean of the 'population' fall into the confidence interval in each of the 1000 iterations. In such a large repeated sample, I want to check if the confidence intervals include the true population parameter 95 percent of the time. 
 
 
-Unfortunately, the confidence interval fails to meet its desired object. 100% of the estimated confidence intervals contain the true population mean. This confidence interval is too wide, including the True paramter more than it should. I will risk higher probabilities of accepting a null hypothesis when it is false.   
+Unfortunately, the confidence interval fails to meet its desired object. 100% of the estimated confidence intervals contain the true population mean. This confidence interval is too wide, including the True parameter more than it should. I will risk accepting a null hypothesis when it is false. In other words, my hypothesis testing is underpowered: I may fail to reject a null hypothesis when it is false. 
 
 
-Or, this result may suggest that my method of calculating the coverage probability is not correct.
+It suggests my standard errors are not accurate, or my hypothesis testing fails to achieve its purpose. Or, this result may suggest that my method of calculating the coverage probability is not correct.
 
-```{r one last time Check performance of standard error coverage probabilities for standard OLS, eval=T, includ = F}
+
+```{r one last time Check performance of standard error coverage probabilities for standard OLS, eval=T, echo=F, results="hide", include = F}
 
 
 CP <- NULL
@@ -855,5 +898,13 @@ CP[j] <- mean(ci)
 }
 
 CP[j]
+
+```
+
+```{r, results='asis', echo=FALSE}
+cat("\\newpage")
+```
+
+```{r appendix, ref.label=knitr::all_labels(),echo=TRUE,eval=FALSE}
 
 ```
